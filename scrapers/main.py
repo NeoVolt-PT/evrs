@@ -1,7 +1,7 @@
 import os
 import json
 import feedparser
-import resend
+import requests
 from datetime import datetime
 from groq import Groq
 from supabase import create_client, Client
@@ -18,9 +18,6 @@ RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 MAX_REGISTRIES_PER_RUN = int(os.getenv("MAX_REGISTRIES_PER_RUN", 1000))
 
 # Initialization
-if RESEND_API_KEY:
-    resend.api_key = RESEND_API_KEY
-
 if GROQ_API_KEY:
     groq_client = Groq(api_key=GROQ_API_KEY)
 else:
@@ -146,13 +143,23 @@ def send_summary_email(new_count, total_count):
     """
     
     try:
-        resend.Emails.send({
-            "from": "EVRS Alerts <onboarding@resend.dev>",
-            "to": "filmfer@gmail.com",
-            "subject": f"EVRS Weekly Report: {new_count} New Registries Added",
-            "html": html_content
-        })
-        print("Summary email sent successfully.")
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {RESEND_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "from": "EVRS Alerts <onboarding@resend.dev>",
+                "to": "filmfer@gmail.com",
+                "subject": f"EVRS Weekly Report: {new_count} New Registries Added",
+                "html": html_content
+            }
+        )
+        if response.status_code in [200, 201]:
+            print("Summary email sent successfully.")
+        else:
+            print(f"Failed to send email: {response.status_code} - {response.text}")
     except Exception as e:
         print(f"Error sending summary email: {e}")
 
