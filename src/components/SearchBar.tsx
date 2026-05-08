@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useRouter } from "next/navigation";
 
 const KNOWN_BRANDS = [
   "Mercedes-Benz",
@@ -46,6 +47,7 @@ const KNOWN_BRANDS = [
 export default function SearchBar() {
   const [query, setQuery] = useState("");
   const { t } = useTranslation();
+  const router = useRouter();
 
   let parsedBrand = "";
   let parsedModel = "";
@@ -76,8 +78,11 @@ export default function SearchBar() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (parsedBrand || parsedModel) {
-      alert(`Pesquisar por Marca: ${parsedBrand} | Modelo: ${parsedModel}`);
-      // Futuramente: Redirecionar para os resultados da pesquisa
+      const searchParams = new URLSearchParams();
+      if (parsedBrand) searchParams.set("brand", parsedBrand);
+      if (parsedModel) searchParams.set("model", parsedModel);
+      
+      router.push(`/results?${searchParams.toString()}`);
     }
   };
 
