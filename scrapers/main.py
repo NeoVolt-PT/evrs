@@ -15,7 +15,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 # Limite máximo de novos registos a adicionar por execução (para controlo de testes e custos da API)
-MAX_REGISTRIES_PER_RUN = int(os.getenv("MAX_REGISTRIES_PER_RUN", 1000))
+MAX_REGISTRIES_PER_RUN = int(os.getenv("MAX_REGISTRIES_PER_RUN", 100000))
 
 # Initialization
 if GROQ_API_KEY:
