@@ -16,6 +16,7 @@ function ResultsContent() {
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [fallbackActive, setFallbackActive] = useState(false);
 
   useEffect(() => {
     async function fetchReports() {
@@ -25,6 +26,7 @@ function ResultsContent() {
       }
       
       setLoading(true);
+      setFallbackActive(false);
       try {
         // Find vehicle ID first
         let query = supabase.from("vehicles").select("id").ilike("brand", brand);
@@ -38,12 +40,32 @@ function ResultsContent() {
 
         if (vehicleError) throw vehicleError;
         
-        if (!vehicleData || vehicleData.length === 0) {
-          setReports([]);
-          return;
-        }
+        let vehicleIds: string[] = [];
 
-        const vehicleIds = vehicleData.map(v => v.id);
+        if (!vehicleData || vehicleData.length === 0) {
+          if (model && model.trim() !== "") {
+            // Fallback to searching only by brand
+            const { data: fallbackData, error: fallbackError } = await supabase
+              .from("vehicles")
+              .select("id")
+              .ilike("brand", brand);
+              
+            if (fallbackError) throw fallbackError;
+            
+            if (fallbackData && fallbackData.length > 0) {
+              setFallbackActive(true);
+              vehicleIds = fallbackData.map(v => v.id);
+            } else {
+              setReports([]);
+              return;
+            }
+          } else {
+            setReports([]);
+            return;
+          }
+        } else {
+          vehicleIds = vehicleData.map(v => v.id);
+        }
 
         // Fetch reports for those vehicles
         const { data: reportsData, error: reportsError } = await supabase
@@ -74,13 +96,19 @@ function ResultsContent() {
             Resultados da Pesquisa
           </h1>
           <p className="text-gray-400 text-lg">
-            {brand} {model && <span className="opacity-75">{model}</span>}
+            {brand} {model && !fallbackActive && <span className="opacity-75">{model}</span>}
           </p>
         </div>
         <Link href="/" className="px-4 py-2 border border-border rounded-lg bg-card hover:bg-border transition text-sm">
           ← Nova Pesquisa
         </Link>
       </div>
+
+      {fallbackActive && (
+        <div className="mb-6 p-4 bg-yellow-900/20 border border-yellow-900/50 rounded-lg text-yellow-200 text-sm">
+          Não encontrámos relatórios para o modelo específico "{model}", a apresentar todos os resultados para a marca {brand}.
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-12">
