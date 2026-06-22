@@ -13,18 +13,33 @@ export default function Home() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        // Get distinct brand count
-        const { count: brands, error: brandErr } = await supabase
+        // Fetch all brands to count distinct ones (Supabase count doesn't do DISTINCT)
+        const { data: brandsData, error: brandsError } = await supabase
           .from("vehicles")
-          .select("brand", { count: "exact", head: true });
+          .select("brand");
 
-        // Get total model count
-        const { count: models, error: modelErr } = await supabase
+        if (brandsError) throw brandsError;
+
+        if (brandsData) {
+          // Count unique brands using Set
+          const uniqueBrands = new Set(brandsData.map((v: { brand: string }) => v.brand));
+          setBrandCount(uniqueBrands.size);
+        }
+
+        // Count distinct brand+model combinations (unique models)
+        const { data: modelsData, error: modelsError } = await supabase
           .from("vehicles")
-          .select("id", { count: "exact", head: true });
+          .select("brand, model");
 
-        if (!brandErr && brands !== null) setBrandCount(brands);
-        if (!modelErr && models !== null) setModelCount(models);
+        if (modelsError) throw modelsError;
+
+        if (modelsData) {
+          // Count unique brand+model pairs
+          const uniqueModels = new Set(
+            modelsData.map((v: { brand: string; model: string }) => `${v.brand}|${v.model}`)
+          );
+          setModelCount(uniqueModels.size);
+        }
       } catch (err) {
         console.error("Error fetching stats:", err);
       }

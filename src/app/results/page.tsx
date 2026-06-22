@@ -18,6 +18,11 @@ function ReportCard({ report }: { report: any }) {
         urlObj.searchParams.set('embed', 'true');
         return urlObj.toString();
       }
+      // For sites that block iframes (like insideevs.com), use a CORS proxy to strip X-Frame-Options
+      const blockedDomains = ['insideevs.com', 'electrek.co', 'cleantechnica.com'];
+      if (blockedDomains.some(d => urlObj.hostname.includes(d))) {
+        return `https://corsproxy.io/?${encodeURIComponent(url)}`;
+      }
       return url;
     } catch (e) {
       return url;
