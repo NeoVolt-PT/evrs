@@ -20,7 +20,9 @@ const resources = {
       "carbon_offset": "Offset your EV carbon footprint",
       "buy_accessories": "EV Accessories",
       "unit_pref": "Unit Preference:",
-      "recent_searches": "Recent Searches:"
+      "recent_searches": "Recent Searches:",
+      "brands": "Brands",
+      "models": "Models"
     }
   },
   pt: {
@@ -38,7 +40,9 @@ const resources = {
       "carbon_offset": "Compensar Pegada de Carbono do EV",
       "buy_accessories": "Acessórios para EV",
       "unit_pref": "Preferência de Unidade:",
-      "recent_searches": "Pesquisas Recentes:"
+      "recent_searches": "Pesquisas Recentes:",
+      "brands": "Marcas",
+      "models": "Modelos"
     }
   }
   // Others: fr, de, it, es can be added here easily.

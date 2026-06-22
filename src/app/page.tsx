@@ -63,13 +63,13 @@ export default function Home() {
             <span className="text-3xl font-bold text-primary">
               {brandCount !== null ? brandCount : "—"}
             </span>
-            <span className="text-sm text-gray-400 mt-1">Marcas</span>
+            <span className="text-sm text-gray-400 mt-1">{t("brands")}</span>
           </div>
           <div className="flex flex-col items-center p-4 bg-card/50 border border-border rounded-xl min-w-[140px]">
             <span className="text-3xl font-bold text-primary">
               {modelCount !== null ? modelCount : "—"}
             </span>
-            <span className="text-sm text-gray-400 mt-1">Modelos</span>
+            <span className="text-sm text-gray-400 mt-1">{t("models")}</span>
           </div>
         </div>
         
