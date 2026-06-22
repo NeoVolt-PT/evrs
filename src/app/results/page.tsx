@@ -79,7 +79,22 @@ function ResultsContent() {
         setReports(reportsData || []);
       } catch (err: unknown) {
         console.error(err);
-        setError(err instanceof Error ? err.message : "Failed to fetch reports");
+        // Extract real error message from Supabase object or network error
+        let errorMsg = "Failed to fetch reports";
+        if (err instanceof Error) {
+          errorMsg = err.message;
+        } else if (typeof err === "object" && err !== null) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          errorMsg = (err as any).message || (err as any).details || JSON.stringify(err);
+        }
+        
+        // Verifica se estamos a usar o placeholder
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+        if (supabaseUrl === 'https://placeholder.supabase.co') {
+          errorMsg += " | ERRO CRÍTICO: As variáveis de ambiente do Supabase (NEXT_PUBLIC_SUPABASE_URL) não estão configuradas na Vercel!";
+        }
+        
+        setError(errorMsg);
       } finally {
         setLoading(false);
       }
@@ -106,7 +121,7 @@ function ResultsContent() {
 
       {fallbackActive && (
         <div className="mb-6 p-4 bg-yellow-900/20 border border-yellow-900/50 rounded-lg text-yellow-200 text-sm">
-          Não encontrámos relatórios para o modelo específico "{model}", a apresentar todos os resultados para a marca {brand}.
+          Não encontrámos relatórios para o modelo específico {model}, a apresentar todos os resultados para a marca {brand}.
         </div>
       )}
 
