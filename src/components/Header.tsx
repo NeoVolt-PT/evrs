@@ -2,6 +2,7 @@
 
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 export default function Header() {
   const { t, i18n } = useTranslation();
@@ -27,9 +28,9 @@ export default function Header() {
   return (
     <header className="w-full border-b border-border bg-card">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="font-bold text-lg tracking-tight">
+        <Link href="/" className="font-bold text-lg tracking-tight hover:opacity-80 transition-opacity">
           EVRS <span className="text-primary hidden sm:inline">| by NeoVolt-PT</span>
-        </div>
+        </Link>
 
         <div className="flex items-center gap-4 text-sm">
           {/* KM/Miles button temporarily disabled

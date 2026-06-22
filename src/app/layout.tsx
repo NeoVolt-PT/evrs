@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "EVRS - EV Real Range & Reliability Global Tracker",
+  title: "EVRS | by NeoVolt-PT",
   description: "Worldwide Electric Vehicle data collection and visualization system.",
 };
 
