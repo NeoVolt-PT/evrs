@@ -29,8 +29,18 @@ else:
     supabase = None
 
 RSS_FEEDS = [
-    "https://www.reddit.com/r/electricvehicles/new/.rss",
-    "https://insideevs.com/rss/news/all/"
+    "https://www.reddit.com/r/electricvehicles/new/.rss?limit=100",
+    "https://www.reddit.com/r/evs/new/.rss?limit=50",
+    "https://www.reddit.com/r/TeslaMotors/new/.rss?limit=50",
+    "https://www.reddit.com/r/TeslaLounge/new/.rss?limit=50",
+    "https://www.reddit.com/r/MachE/new/.rss?limit=50",
+    "https://www.reddit.com/r/Ioniq5/new/.rss?limit=50",
+    "https://www.reddit.com/r/Rivian/new/.rss?limit=50",
+    "https://www.reddit.com/r/VWiD4Owners/new/.rss?limit=50",
+    "https://insideevs.com/rss/news/all/",
+    "https://insideevs.com/rss/reviews/all/",
+    "https://electrek.co/feed/",
+    "https://cleantechnica.com/category/clean-transport/feed/"
 ]
 
 def fetch_rss_data():
@@ -63,14 +73,15 @@ def analyze_with_ai(text: str):
     Analyze the following text about Electric Vehicles.
     Extract the following information in strict JSON format:
     {{
-        "brand": "Brand Name (e.g., Tesla, Hyundai)",
-        "model": "Model Name (e.g., Model 3, Ioniq 5)",
-        "type": "Must be exactly one of: 'Real Range', 'Mechanical', 'Battery', or 'Positives'",
-        "description": "Translate the main point to International English in 1-2 sentences",
+        "brand": "Brand Name (e.g., Tesla, Hyundai, Ford). Guess from context if obvious.",
+        "model": "Model Name (e.g., Model 3, Ioniq 5). Use 'Unknown' or 'Multiple' if not specified but the brand is known.",
+        "type": "Must be exactly one of: 'Real Range', 'Mechanical', 'Battery', or 'Positives'. Choose the best fit.",
+        "description": "Summarize or translate the main point to International English in 1-3 sentences. Focus on EV reliability, range, issues, or positive feedback.",
         "language_original": "e.g., 'EN', 'PT', 'FR'",
         "contradictory_info": true or false (boolean)
     }}
-    If the text is NOT about a specific EV model, return {{"error": "Not an EV review/report"}}.
+    If the text is completely unrelated to electric vehicles or contains zero useful feedback/news about an EV, return {{"error": "Not relevant"}}.
+    Be more lenient: if it mentions an EV brand, try your best to extract it.
     
     Text: {text}
     """
