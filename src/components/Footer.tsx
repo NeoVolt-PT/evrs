@@ -23,8 +23,7 @@ export default function Footer() {
         {/* Affiliate / Carbon Offset Placeholder */}
         <div className="flex flex-col gap-2">
           <h3 className="font-semibold text-white mb-2">Eco & Affiliates</h3>
-          <a href="#" className="text-primary hover:underline">{t("carbon_offset")}</a>
-          <a href="#" className="text-primary hover:underline">{t("buy_accessories")}</a>
+          <p className="text-gray-400 italic">Em preparação.</p>
         </div>
       </div>
       <div className="text-center text-gray-500 mt-8 pt-4 border-t border-border/50">
