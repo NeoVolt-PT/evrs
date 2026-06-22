@@ -29,6 +29,7 @@ export default function RootLayout({
             font-family: var(--font-geist-sans);
           }
         `}</style>
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9481255472542085" crossOrigin="anonymous"></script>
       </head>
       <body className="min-h-full flex flex-col">
         <Providers>

@@ -32,6 +32,7 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-4 text-sm">
+          {/* KM/Miles button temporarily disabled
           {mounted && (
             <button 
               onClick={toggleUnit}
@@ -40,6 +41,7 @@ export default function Header() {
               {unit.toUpperCase()}
             </button>
           )}
+          */}
 
           <div className="flex bg-background border border-border rounded overflow-hidden">
             <button 
