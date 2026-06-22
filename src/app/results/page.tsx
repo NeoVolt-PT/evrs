@@ -55,13 +55,16 @@ function ReportCard({ report }: { report: any }) {
 
       {isExpanded && report.source_link && (
         <div className="mt-4 w-full rounded-md overflow-hidden border border-border bg-black/20 flex flex-col">
-          <iframe 
-            src={getEmbedUrl(report.source_link)} 
-            className="w-full min-h-[400px] bg-white/5"
-            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-            title="Fonte Original"
-            loading="lazy"
-          />
+          <div className="relative w-full" style={{ height: '600px', overflow: 'auto' }}>
+            <iframe 
+              src={getEmbedUrl(report.source_link)} 
+              className="absolute inset-0 w-full h-[1500px] bg-white/5"
+              style={{ border: 'none' }}
+              sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-top-navigation"
+              title="Fonte Original"
+              loading="lazy"
+            />
+          </div>
           <div className="bg-card p-3 text-center text-xs text-gray-400 border-t border-border flex items-center justify-center gap-2">
             <span>A página não carregou corretamente?</span>
             <a href={report.source_link} target="_blank" rel="noopener noreferrer" className="text-primary font-medium hover:underline flex items-center gap-1">
