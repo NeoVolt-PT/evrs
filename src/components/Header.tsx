@@ -25,6 +25,12 @@ export default function Header() {
 
         <div className="flex items-center gap-3 sm:gap-4 text-sm">
           <Link
+            href="/results?brand=Incentives"
+            className="px-2.5 py-1 rounded-full bg-purple-900/30 text-purple-300 border border-purple-500/40 hover:bg-purple-900/50 transition text-xs font-semibold"
+          >
+            {t("nav_incentives")}
+          </Link>
+          <Link
             href="/about"
             className="text-gray-300 hover:text-primary transition font-medium"
           >

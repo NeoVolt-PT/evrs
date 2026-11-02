@@ -171,6 +171,23 @@ export default function Home() {
         
         <SearchBar vehicles={vehicles} />
 
+        {/* Quick CTA to EV Incentives, Discounts & Political Measures by Country */}
+        <div className="pt-2 flex justify-center">
+          <Link
+            href="/results?brand=Incentives"
+            onClick={() =>
+              trackEvent("search_vehicle", {
+                brand: "Incentives",
+                model: "All Countries",
+                source: "home_incentives_cta",
+              })
+            }
+            className="px-5 py-2.5 rounded-full bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 border border-purple-500/40 text-xs sm:text-sm font-semibold transition shadow-sm"
+          >
+            🏛️ {t("incentives_hero_btn")}
+          </Link>
+        </div>
+
         {topVehicles.length > 0 && (
           <div className="pt-6 text-left space-y-6">
             <div>

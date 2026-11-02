@@ -172,7 +172,7 @@ BRAND_ALIASES = {
     "omoda": "Omoda",
 }
 
-VALID_REPORT_TYPES = {"Real Range", "Mechanical", "Battery", "Positives"}
+VALID_REPORT_TYPES = {"Real Range", "Mechanical", "Battery", "Positives", "Incentives"}
 
 # Prioritized list of Groq chat/text models (updated for current GroqCloud production models)
 PREFERRED_GROQ_MODELS = [
@@ -309,15 +309,19 @@ def analyze_with_ai(text: str):
 
     prompt = f"""
     Analyze the following text about Electric Vehicles.
-    IMPORTANT: We ONLY accept reports that refer to a SPECIFIC Electric Vehicle Brand AND a SPECIFIC Model (e.g., Tesla Model 3, Tesla Model Y, Hyundai Ioniq 5, Kia EV6, Volkswagen ID.4, Ford Mustang Mach-E, Rivian R1T, BYD Seal, Volvo EX30, Porsche Taycan, Chevrolet Bolt EV, BMW i4, etc.).
-    If the text is only about a brand in general, stock market news, or does not mention a specific EV model, return {{"error": "No specific EV model"}}.
+    We accept TWO kinds of EV reports:
+    1. Vehicle-specific reports: MUST refer to a SPECIFIC Electric Vehicle Brand AND a SPECIFIC Model (e.g., Tesla Model 3, Hyundai Ioniq 5, Kia EV6, Volkswagen ID.4, BYD Seal, Volvo EX30, etc.).
+    2. Policy, Discounts & Electrification Incentives ('Incentives'): Government subsidies, tax credits, EV purchase rebates, import tariffs, charging infrastructure laws, or manufacturer EV discounts applied in a specific Country/Region (e.g., Portugal, United States, European Union, Germany, France, Spain, United Kingdom, China, Norway, Canada, Brazil).
+
+    If the text is neither a specific EV model report nor an EV policy/incentive/discount measure, return {{"error": "Not relevant"}}.
 
     Extract the following information in strict JSON format:
     {{
-        "brand": "Exact Brand Name (e.g., Tesla, Hyundai, Ford, Volkswagen, Mercedes-Benz, BYD, Kia, Rivian, BMW, Volvo).",
-        "model": "Exact Specific Model Name (e.g., Model 3, Model Y, Ioniq 5, ID.4, Mustang Mach-E, EV6, R1T, Seal, EX30). NEVER use 'General', 'Unknown', or 'Multiple'.",
-        "type": "Must be exactly one of: 'Real Range', 'Mechanical', 'Battery', or 'Positives'. Choose the best fit.",
-        "description": "Write a clear, comprehensive, well-structured technical summary in International English with 4 to 6 complete sentences (minimum 60 words). Explain the exact context, real-world range or consumption figures, battery/charging behavior, mechanical details, driving conditions, and key takeaways. Wrap the 4 to 8 most important technical keywords, metrics, or findings in double asterisks like **450 km real range**, **LFP battery**, **fast charging**, **heat pump**, or **ICCU failure** so they can be highlighted in the UI.",
+        "brand": "Exact Brand Name (e.g., Tesla, Hyundai, BYD) OR 'Incentives' if it is a general government/country policy or EV incentive.",
+        "model": "Exact Specific Model Name (e.g., Model 3, Ioniq 5, ID.4). If type is 'Incentives' and no single car model is specified, put the Country Name here (e.g., 'Portugal', 'United States', 'European Union', 'Germany', 'United Kingdom', 'China', 'France', 'Spain').",
+        "country": "Country or Region where the policy/incentive/discount applies (e.g., 'Portugal', 'United States', 'European Union', 'Germany', 'France', 'Spain', 'United Kingdom', 'China', 'Norway', 'Global').",
+        "type": "Must be exactly one of: 'Real Range', 'Mechanical', 'Battery', 'Positives', or 'Incentives'. Use 'Incentives' for any financial aid, tax credit, discount, or political electrification measure.",
+        "description": "Write a clear, comprehensive, well-structured technical summary in International English with 4 to 6 complete sentences (minimum 60 words). Explain the exact context, financial amounts, discounts, policy rules, or real-world range/battery/mechanical details, and key takeaways. Wrap the 4 to 8 most important keywords, amounts, or findings in double asterisks like **€4,000 subsidy**, **$7,500 tax credit**, **450 km real range**, **LFP battery**, or **tax exemption** so they can be highlighted in the UI.",
         "language_original": "e.g., 'EN', 'PT', 'FR'",
         "contradictory_info": true or false (boolean),
         "estimated_range_km": number or null (if a specific real-world range distance is mentioned in the text, convert it to kilometers as a number between 50 and 1500; otherwise null)
@@ -419,14 +423,21 @@ def save_to_supabase(data, link):
         return False
 
     try:
-        brand, model = normalize_brand_and_model(data.get('brand', ''), data.get('model', ''))
-        if not brand or not model:
-            print(f" -> Skipped: requires both specific Brand and Model (got brand='{brand}', model='{model}').")
-            return False
-
         report_type = data.get('type', 'Positives')
         if report_type not in VALID_REPORT_TYPES:
             report_type = 'Positives'
+
+        country = (data.get('country') or '').strip()
+        if report_type == 'Incentives':
+            brand = "Incentives"
+            model = country if country and country.lower() not in INVALID_MODELS else (data.get('model') or 'Global').strip()
+            if model.lower() in INVALID_MODELS:
+                model = "Global"
+        else:
+            brand, model = normalize_brand_and_model(data.get('brand', ''), data.get('model', ''))
+            if not brand or not model:
+                print(f" -> Skipped: requires both specific Brand and Model (got brand='{brand}', model='{model}').")
+                return False
 
         contradictory_info = bool(data.get('contradictory_info', False))
         raw_range = data.get('estimated_range_km')

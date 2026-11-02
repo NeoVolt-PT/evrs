@@ -6,7 +6,13 @@ import { supabase } from "@/lib/supabase";
 import { useTranslation } from "react-i18next";
 import { useUnit } from "@/components/Providers";
 import RaceGauge from "@/components/RaceGauge";
+import IncentivesGauge, { CountryMeasureStat } from "@/components/IncentivesGauge";
 import MonetizationCards from "@/components/MonetizationCards";
+import {
+  CURATED_INCENTIVES,
+  detectCountryFromReport,
+  isIncentiveText,
+} from "@/lib/defaultIncentives";
 import { trackEvent } from "@/lib/analytics";
 import Link from "next/link";
 
@@ -22,10 +28,11 @@ interface ReportItem {
   estimated_range_km?: number | null;
   vehicle_brand?: string;
   vehicle_model?: string;
+  country?: string;
 }
 
 const EV_KEYWORD_REGEX =
-  /(\*\*[^*]+\*\*|\b\d+(?:[.,]\d+)?\s*(?:km\/h|km|miles|mi|kWh|kW|mph|%|°C|°F|V|A|Wh\/km|mi\/kWh|years|anos|months|meses)\b|\b(?:real[- ]world range|range|autonomia|battery|bateria|batteries|fast[- ]charging|supercharger|charging|carregamento|degradation|degradação|WLTP|EPA|LFP|NMC|BMS|ICCU|12V|heat pump|bomba de calor|recall|software|OTA|inverter|inversor|motor|suspension|suspensão|brakes|travões|efficiency|eficiência|consumption|consumo|winter|inverno|highway|autoestrada|AWD|RWD|FWD|NACS|CCS|Type 2|regenerative braking|regeneração|state of health|SoH|thermal|warranty|garantia|reliability|fiabilidade)\b)/gi;
+  /(\*\*[^*]+\*\*|(?:€|\$|£)\s*\d+(?:[.,]\d+)?(?:\s*(?:mil|k|billion|million|B|M))?|\b\d+(?:[.,]\d+)?\s*(?:km\/h|km|miles|mi|kWh|kW|mph|%|°C|°F|V|A|Wh\/km|mi\/kWh|years|anos|months|meses|NOK|RMB)\b|\b(?:real[- ]world range|range|autonomia|battery|bateria|batteries|fast[- ]charging|supercharger|charging|carregamento|degradation|degradação|WLTP|EPA|LFP|NMC|BMS|ICCU|12V|heat pump|bomba de calor|recall|software|OTA|inverter|inversor|motor|suspension|suspensão|brakes|travões|efficiency|eficiência|consumption|consumo|winter|inverno|highway|autoestrada|AWD|RWD|FWD|NACS|CCS|Type 2|regenerative braking|regeneração|state of health|SoH|thermal|warranty|garantia|reliability|fiabilidade|Fundo Ambiental|ISV|IUC|IVA|VAT|tax credit|subsidy|subsidies|incentive|incentives|rebate|rebates|discount|discounts|apoio|incentivo|desconto|isenção|Plan MOVES|Bonus Écologique|Leasing Social)\b)/gi;
 
 function renderHighlightedText(text: string) {
   const parts = text.split(EV_KEYWORD_REGEX);
@@ -94,6 +101,13 @@ function getExpandedContextText(
       : `Additional telemetry context for ${vehicleName}: This entry documents physical **reliability** and hardware components such as the drive **motor**, **inverter**, **suspension**, steering, or **brakes**. Proactive inspection under factory **warranty** is recommended to prevent long-term wear issues.`;
   }
 
+  if (report.type === "Incentives") {
+    const countryLabel = report.country || report.vehicle_brand || "Global";
+    return isPt
+      ? `Enquadramento em ${countryLabel}: Esta medida integra o pacote de **incentivos**, **descontos** diretos ou benefícios fiscais (**ISV**, **IUC**, **IVA** ou **Fundo Ambiental**) aplicáveis à aquisição de veículos elétricos e instalação de postos de **carregamento**.`
+      : `Policy context in ${countryLabel}: This measure is part of the national **incentives**, purchase **rebates**, **tax credit** exemptions, or **charging** infrastructure grants aimed at accelerating electric vehicle adoption.`;
+  }
+
   return isPt
     ? `Análise complementar para ${vehicleName}: Os indicadores deste relato destacam positivamente a **fiabilidade**, conforto de condução, **eficiência** elétrica e integração de **software** do veículo, contribuindo favoravelmente para a pontuação global no Índice EVRS.`
     : `Additional telemetry context for ${vehicleName}: This report highlights positive owner satisfaction, driving dynamics, electrical **efficiency**, and **software** integration, contributing favorably to the vehicle's overall **reliability** score in the EVRS Index.`;
@@ -126,6 +140,7 @@ function ReportCard({ report }: { report: ReportItem }) {
     if (type === "Battery") return t("type_battery");
     if (type === "Mechanical") return t("type_mechanical");
     if (type === "Positives") return t("type_positives");
+    if (type === "Incentives") return t("type_incentives");
     return type;
   };
 
@@ -143,10 +158,16 @@ function ReportCard({ report }: { report: ReportItem }) {
             report.type === "Real Range" ? "bg-blue-900/30 text-blue-400 border border-blue-900/50" :
             report.type === "Battery" ? "bg-orange-900/30 text-orange-400 border border-orange-900/50" :
             report.type === "Mechanical" ? "bg-red-900/30 text-red-400 border border-red-900/50" :
+            report.type === "Incentives" ? "bg-purple-900/30 text-purple-300 border border-purple-500/50" :
             "bg-emerald-900/30 text-emerald-400 border border-emerald-900/50"
           }`}>
             {getTypeLabel(report.type)}
           </span>
+          {report.country && (
+            <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-purple-950/50 text-purple-200 border border-purple-500/40">
+              🌍 {report.country}
+            </span>
+          )}
           {(report.vehicle_brand || showModelBadge) && (
             <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-background text-gray-300 border border-border">
               {report.vehicle_brand}{showModelBadge ? ` ${report.vehicle_model}` : ""}
@@ -248,9 +269,12 @@ function ResultsContent() {
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [averageRangeKm, setAverageRangeKm] = useState<number | null>(null);
   const [selectedType, setSelectedType] = useState<string>("All");
+  const [selectedCountry, setSelectedCountry] = useState<string>("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [fallbackActive, setFallbackActive] = useState(false);
+
+  const isGlobalIncentivesMode = (brand || "").toLowerCase() === "incentives";
 
   useEffect(() => {
     async function fetchReports() {
@@ -258,22 +282,56 @@ function ResultsContent() {
         setLoading(false);
         return;
       }
-      
+
       setLoading(true);
       setFallbackActive(false);
       setAverageRangeKm(null);
-      setSelectedType("All");
+      setSelectedType(isGlobalIncentivesMode ? "Incentives" : "All");
+      setSelectedCountry(model && isGlobalIncentivesMode ? model : "All");
+
       try {
+        if (isGlobalIncentivesMode) {
+          // Fetch all vehicles & reports to extract policy/discount/incentive measures across countries
+          const [vRes, rRes] = await Promise.all([
+            supabase.from("vehicles").select("id, brand, model"),
+            supabase.from("reports").select("*").order("created_at", { ascending: false }).limit(300),
+          ]);
+
+          const vMap = new Map(
+            ((vRes.data || []) as { id: string; brand: string; model: string }[]).map((v) => [v.id, v])
+          );
+
+          const dbIncentives: ReportItem[] = [];
+          for (const r of (rRes.data || []) as ReportItem[]) {
+            const v = vMap.get(r.vehicle_id);
+            const combinedText = `${v?.brand || ""} ${v?.model || ""} ${r.description || ""}`;
+            if (r.type === "Incentives" || v?.brand === "Incentives" || isIncentiveText(combinedText)) {
+              const detectedCountry = detectCountryFromReport(combinedText, v?.model);
+              dbIncentives.push({
+                ...r,
+                type: "Incentives",
+                vehicle_brand: v?.brand === "Incentives" ? detectedCountry : v?.brand,
+                vehicle_model: v?.brand === "Incentives" ? "" : v?.model,
+                country: detectedCountry,
+              });
+            }
+          }
+
+          const mergedIncentives = [...CURATED_INCENTIVES, ...dbIncentives];
+          setReports(mergedIncentives);
+          return;
+        }
+
         let query = supabase.from("vehicles").select("id, brand, model").ilike("brand", brand);
-        
+
         if (model && model.trim() !== "") {
-           query = query.ilike("model", `%${model}%`);
+          query = query.ilike("model", `%${model}%`);
         }
 
         const { data: vehicleData, error: vehicleError } = await query;
 
         if (vehicleError) throw vehicleError;
-        
+
         let matchedVehicles: { id: string; brand: string; model: string }[] = [];
 
         if (!vehicleData || vehicleData.length === 0) {
@@ -282,9 +340,9 @@ function ResultsContent() {
               .from("vehicles")
               .select("id, brand, model")
               .ilike("brand", brand);
-              
+
             if (fallbackError) throw fallbackError;
-            
+
             if (fallbackData && fallbackData.length > 0) {
               setFallbackActive(true);
               matchedVehicles = fallbackData;
@@ -300,8 +358,8 @@ function ResultsContent() {
           matchedVehicles = vehicleData;
         }
 
-        const vehicleIds = matchedVehicles.map(v => v.id);
-        const vehicleMap = new Map(matchedVehicles.map(v => [v.id, v]));
+        const vehicleIds = matchedVehicles.map((v) => v.id);
+        const vehicleMap = new Map(matchedVehicles.map((v) => [v.id, v]));
 
         const { data: reportsData, error: reportsError } = await supabase
           .from("reports")
@@ -313,10 +371,16 @@ function ResultsContent() {
 
         const enrichedReports: ReportItem[] = (reportsData || []).map((r: ReportItem) => {
           const vehicle = vehicleMap.get(r.vehicle_id);
+          const isInc = r.type === "Incentives" || isIncentiveText(r.description || "");
+          const country = isInc
+            ? detectCountryFromReport(r.description || "", vehicle?.model)
+            : undefined;
           return {
             ...r,
+            type: isInc ? "Incentives" : r.type,
             vehicle_brand: vehicle?.brand,
             vehicle_model: vehicle?.model,
+            country,
           };
         });
 
@@ -370,13 +434,14 @@ function ResultsContent() {
     }
 
     fetchReports();
-  }, [brand, model]);
+  }, [brand, model, isGlobalIncentivesMode]);
 
   const getCategoryLabel = (type: string) => {
     if (type === "Real Range") return t("type_real_range");
     if (type === "Battery") return t("type_battery");
     if (type === "Mechanical") return t("type_mechanical");
     if (type === "Positives") return t("type_positives");
+    if (type === "Incentives") return t("type_incentives");
     return type;
   };
 
@@ -394,6 +459,10 @@ function ResultsContent() {
         return isSelected
           ? "bg-red-500/30 text-red-200 border-red-400 ring-2 ring-red-500/40"
           : "bg-red-900/30 text-red-400 border-red-900/50 hover:bg-red-900/50";
+      case "Incentives":
+        return isSelected
+          ? "bg-purple-500/30 text-purple-200 border-purple-400 ring-2 ring-purple-500/40"
+          : "bg-purple-900/30 text-purple-300 border-purple-500/50 hover:bg-purple-900/50";
       default:
         return isSelected
           ? "bg-emerald-500/30 text-emerald-200 border-emerald-400 ring-2 ring-emerald-500/40"
@@ -401,7 +470,6 @@ function ResultsContent() {
     }
   };
 
-  // Build category counts strictly from the categories present in the current search results
   const categoryCounts = new Map<string, number>();
   for (const r of reports) {
     if (r.type) {
@@ -415,21 +483,42 @@ function ResultsContent() {
     count,
   }));
 
-  const filteredReports =
-    selectedType === "All" ? reports : reports.filter((r) => r.type === selectedType);
+  const isIncentivesCategorySelected =
+    isGlobalIncentivesMode || selectedType === "Incentives";
+
+  const incentiveReports = reports.filter((r) => r.type === "Incentives");
+  const countryMap = new Map<string, number>();
+  for (const r of incentiveReports) {
+    const c = r.country || "Global";
+    countryMap.set(c, (countryMap.get(c) || 0) + 1);
+  }
+  const countryStats: CountryMeasureStat[] = Array.from(countryMap.entries())
+    .map(([country, count]) => ({ country, count }))
+    .sort((a, b) => b.count - a.count || a.country.localeCompare(b.country));
+
+  const filteredReports = reports.filter((r) => {
+    const matchesType = selectedType === "All" || r.type === selectedType;
+    if (!matchesType) return false;
+    if (isIncentivesCategorySelected && selectedCountry !== "All") {
+      return (r.country || "Global").toLowerCase() === selectedCountry.toLowerCase();
+    }
+    return true;
+  });
 
   return (
     <>
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">
-            {t("search_results")}
+            {isGlobalIncentivesMode ? t("incentives_page_title") : t("search_results")}
           </h1>
           <div className="flex flex-wrap items-center gap-3">
-            <p className="text-gray-400 text-lg">
-              {brand} {model && !fallbackActive && <span className="opacity-75">{model}</span>}
-            </p>
-            {averageRangeKm !== null && (
+            {!isGlobalIncentivesMode && (
+              <p className="text-gray-400 text-lg">
+                {brand} {model && !fallbackActive && <span className="opacity-75">{model}</span>}
+              </p>
+            )}
+            {averageRangeKm !== null && !isIncentivesCategorySelected && (
               <span className="px-3 py-1 text-sm font-semibold rounded-full bg-primary/15 text-primary border border-primary/40">
                 ⚡ {t("avg_real_range")}: {formatRangeKm(averageRangeKm)}
               </span>
@@ -463,47 +552,98 @@ function ResultsContent() {
         </div>
       ) : (
         <div className="space-y-6">
-          <RaceGauge
-            vehicleName={[brand, model && !fallbackActive ? model : ""].filter(Boolean).join(" ")}
-            reports={reports}
-            averageRangeKm={averageRangeKm}
-          />
-
-          <div className="flex flex-wrap items-center gap-2 p-3 bg-card/50 border border-border rounded-xl">
-            <span className="text-xs font-medium text-gray-400 mr-1">
-              {t("filter_by_category")}
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedType("All");
-                trackEvent("filter_category", { category: "All", brand: brand || "" });
-              }}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
-                selectedType === "All"
-                  ? "bg-white/15 text-white border-white/50 ring-2 ring-white/20"
-                  : "bg-card text-gray-300 border-border hover:bg-border/50"
-              }`}
-            >
-              {t("filter_all")} ({reports.length})
-            </button>
-            {availableCategories.map((cat) => (
+          {isIncentivesCategorySelected ? (
+            <IncentivesGauge
+              countryStats={countryStats}
+              totalMeasures={incentiveReports.length}
+              selectedCountry={selectedCountry}
+              onSelectCountry={(country) => setSelectedCountry(country)}
+            />
+          ) : (
+            <RaceGauge
+              vehicleName={[brand, model && !fallbackActive ? model : ""].filter(Boolean).join(" ")}
+              reports={reports}
+              averageRangeKm={averageRangeKm}
+            />
+          )}
+          {!isGlobalIncentivesMode && (
+            <div className="flex flex-wrap items-center gap-2 p-3 bg-card/50 border border-border rounded-xl">
+              <span className="text-xs font-medium text-gray-400 mr-1">
+                {t("filter_by_category")}
+              </span>
               <button
-                key={cat.key}
                 type="button"
                 onClick={() => {
-                  setSelectedType(cat.key);
-                  trackEvent("filter_category", { category: cat.key, brand: brand || "" });
+                  setSelectedType("All");
+                  setSelectedCountry("All");
+                  trackEvent("filter_category", { category: "All", brand: brand || "" });
                 }}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${getCategoryFilterClasses(
-                  cat.key,
-                  selectedType === cat.key
-                )}`}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+                  selectedType === "All"
+                    ? "bg-white/15 text-white border-white/50 ring-2 ring-white/20"
+                    : "bg-card text-gray-300 border-border hover:bg-border/50"
+                }`}
               >
-                {cat.label} ({cat.count})
+                {t("filter_all")} ({reports.length})
               </button>
-            ))}
-          </div>
+              {availableCategories.map((cat) => (
+                <button
+                  key={cat.key}
+                  type="button"
+                  onClick={() => {
+                    setSelectedType(cat.key);
+                    setSelectedCountry("All");
+                    trackEvent("filter_category", { category: cat.key, brand: brand || "" });
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${getCategoryFilterClasses(
+                    cat.key,
+                    selectedType === cat.key
+                  )}`}
+                >
+                  {cat.label} ({cat.count})
+                </button>
+              ))}
+            </div>
+          )}
+
+          {isIncentivesCategorySelected && countryStats.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 p-3 bg-card/50 border border-purple-500/30 rounded-xl">
+              <span className="text-xs font-medium text-purple-300 mr-1">
+                🌍 {t("incentives_filter_country")}
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedCountry("All")}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+                  selectedCountry === "All"
+                    ? "bg-purple-500/30 text-purple-100 border-purple-400 ring-2 ring-purple-500/40"
+                    : "bg-card text-gray-300 border-border hover:bg-border/50"
+                }`}
+              >
+                {t("incentives_all_countries")} ({incentiveReports.length})
+              </button>
+              {countryStats.map((c) => (
+                <button
+                  key={c.country}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCountry(c.country);
+                    trackEvent("filter_category", {
+                      category: "Incentives_Country",
+                      country: c.country,
+                    });
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+                    selectedCountry.toLowerCase() === c.country.toLowerCase()
+                      ? "bg-purple-500/30 text-purple-100 border-purple-400 ring-2 ring-purple-500/40"
+                      : "bg-purple-900/20 text-purple-300 border-purple-800/50 hover:bg-purple-900/40"
+                  }`}
+                >
+                  {c.country} ({c.count})
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="flex justify-between text-sm text-gray-400 border-b border-border pb-4">
             <span>{t("reports_found", { count: filteredReports.length })}</span>
