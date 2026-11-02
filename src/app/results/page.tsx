@@ -274,6 +274,27 @@ function ResultsContent() {
     return type;
   };
 
+  const getCategoryFilterClasses = (type: string, isSelected: boolean) => {
+    switch (type) {
+      case "Real Range":
+        return isSelected
+          ? "bg-blue-500/30 text-blue-200 border-blue-400 ring-2 ring-blue-500/40"
+          : "bg-blue-900/30 text-blue-400 border-blue-900/50 hover:bg-blue-900/50";
+      case "Battery":
+        return isSelected
+          ? "bg-orange-500/30 text-orange-200 border-orange-400 ring-2 ring-orange-500/40"
+          : "bg-orange-900/30 text-orange-400 border-orange-900/50 hover:bg-orange-900/50";
+      case "Mechanical":
+        return isSelected
+          ? "bg-red-500/30 text-red-200 border-red-400 ring-2 ring-red-500/40"
+          : "bg-red-900/30 text-red-400 border-red-900/50 hover:bg-red-900/50";
+      default:
+        return isSelected
+          ? "bg-emerald-500/30 text-emerald-200 border-emerald-400 ring-2 ring-emerald-500/40"
+          : "bg-emerald-900/30 text-emerald-400 border-emerald-900/50 hover:bg-emerald-900/50";
+    }
+  };
+
   // Build category counts strictly from the categories present in the current search results
   const categoryCounts = new Map<string, number>();
   for (const r of reports) {
@@ -343,9 +364,9 @@ function ResultsContent() {
             <button
               type="button"
               onClick={() => setSelectedType("All")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
                 selectedType === "All"
-                  ? "bg-primary text-primary-foreground border-primary"
+                  ? "bg-white/15 text-white border-white/50 ring-2 ring-white/20"
                   : "bg-card text-gray-300 border-border hover:bg-border/50"
               }`}
             >
@@ -356,11 +377,10 @@ function ResultsContent() {
                 key={cat.key}
                 type="button"
                 onClick={() => setSelectedType(cat.key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${getCategoryFilterClasses(
+                  cat.key,
                   selectedType === cat.key
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-card text-gray-300 border-border hover:bg-border/50"
-                }`}
+                )}`}
               >
                 {cat.label} ({cat.count})
               </button>
