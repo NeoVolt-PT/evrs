@@ -31,6 +31,7 @@ else:
     supabase = None
 
 RSS_FEEDS = [
+    # Reddit EV Owner Communities (Public RSS)
     "https://www.reddit.com/r/electricvehicles/new/.rss?limit=100",
     "https://www.reddit.com/r/evs/new/.rss?limit=50",
     "https://www.reddit.com/r/TeslaMotors/new/.rss?limit=50",
@@ -39,28 +40,91 @@ RSS_FEEDS = [
     "https://www.reddit.com/r/Ioniq5/new/.rss?limit=50",
     "https://www.reddit.com/r/Rivian/new/.rss?limit=50",
     "https://www.reddit.com/r/VWiD4Owners/new/.rss?limit=50",
+    "https://www.reddit.com/r/BoltEV/new/.rss?limit=40",
+    "https://www.reddit.com/r/Polestar/new/.rss?limit=40",
+    "https://www.reddit.com/r/KiaEV6/new/.rss?limit=40",
+    "https://www.reddit.com/r/KiaEV9/new/.rss?limit=40",
+    "https://www.reddit.com/r/Lucid/new/.rss?limit=40",
+    "https://www.reddit.com/r/BYD/new/.rss?limit=40",
+    "https://www.reddit.com/r/EuroEV/new/.rss?limit=40",
+    "https://www.reddit.com/r/BMWiX/new/.rss?limit=40",
+    "https://www.reddit.com/r/EquinoxEV/new/.rss?limit=40",
+    # EV News & Review Portals (Public RSS)
     "https://insideevs.com/rss/news/all/",
     "https://insideevs.com/rss/reviews/all/",
     "https://electrek.co/feed/",
-    "https://cleantechnica.com/category/clean-transport/feed/"
+    "https://cleantechnica.com/category/clean-transport/feed/",
+    "https://www.electrive.com/feed/",
+    "https://www.greencarreports.com/rss/news",
+    # Official YouTube EV Review Channels (Public Syndication XML Feeds)
+    "https://www.youtube.com/feeds/videos.xml?channel_id=UCG1QcV31eoSaX4rE8avQL4A",  # Bjørn Nyland
+    "https://www.youtube.com/feeds/videos.xml?channel_id=UCyUkxZe25fHq3A_bRwWMGfA",  # Out of Spec Reviews
+    "https://www.youtube.com/feeds/videos.xml?channel_id=UCdX0BJ9riRNMMJ9O4R9bE6w",  # State Of Charge
+    "https://www.youtube.com/feeds/videos.xml?channel_id=UCzz4CoEgSgWNs9ZAvRMhW2A",  # Fully Charged Show
 ]
 
+NHTSA_EV_MODELS = [
+    ("TESLA", "MODEL 3", 2024),
+    ("TESLA", "MODEL Y", 2024),
+    ("HYUNDAI", "IONIQ 5", 2024),
+    ("FORD", "MUSTANG MACH-E", 2024),
+    ("RIVIAN", "R1T", 2024),
+    ("VOLKSWAGEN", "ID.4", 2024),
+    ("KIA", "EV6", 2024),
+    ("CHEVROLET", "BOLT EV", 2023),
+]
+
+
+def fetch_nhtsa_complaints():
+    """Fetches public-domain owner complaints from the official US NHTSA API (100% legal & free)."""
+    complaints = []
+    for make, model, year in NHTSA_EV_MODELS:
+        url = (
+            f"https://api.nhtsa.gov/complaints/complaintsByVehicle"
+            f"?make={requests.utils.quote(make)}&model={requests.utils.quote(model)}&modelYear={year}"
+        )
+        try:
+            print(f"Fetching NHTSA Public API: {make} {model} ({year})")
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                payload = resp.json()
+                for item in (payload.get("results") or [])[:5]:
+                    odi_id = item.get("odiNumber")
+                    summary = item.get("summary", "")
+                    components = item.get("components", "UNKNOWN")
+                    if odi_id and summary:
+                        complaints.append({
+                            "title": f"[NHTSA {make} {model} - {components}]",
+                            "summary": summary[:800],
+                            "link": f"https://www.nhtsa.gov/vehicle/{year}/{make}/{model}#odi-{odi_id}",
+                            "published": datetime.now().isoformat(),
+                        })
+        except Exception as e:
+            print(f"Warning fetching NHTSA for {make} {model}: {e}")
+    return complaints
+
+
 def fetch_rss_data():
-    """Fetches and parses RSS feeds for EV news and forum posts."""
+    """Fetches and parses RSS feeds (Reddit, EV News, YouTube XML) plus NHTSA public API."""
     articles = []
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) EVRS_Bot/1.0"}
     
     for url in RSS_FEEDS:
         print(f"Fetching RSS: {url}")
-        feed = feedparser.parse(url, request_headers=headers)
-        # Extrai todos os artigos disponíveis no feed
-        for entry in feed.entries:
-            articles.append({
-                "title": entry.title,
-                "summary": getattr(entry, 'summary', ''),
-                "link": entry.link,
-                "published": getattr(entry, 'published', datetime.now().isoformat())
-            })
+        try:
+            feed = feedparser.parse(url, request_headers=headers)
+            for entry in feed.entries:
+                summary = getattr(entry, "summary", "") or getattr(entry, "description", "")
+                articles.append({
+                    "title": entry.title,
+                    "summary": summary[:1000],
+                    "link": entry.link,
+                    "published": getattr(entry, "published", datetime.now().isoformat())
+                })
+        except Exception as e:
+            print(f"Warning parsing RSS {url}: {e}")
+
+    articles.extend(fetch_nhtsa_complaints())
     return articles
 
 BRAND_ALIASES = {

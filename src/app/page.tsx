@@ -117,6 +117,40 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        {/* Original Editorial & Methodology Section for SEO and User Trust */}
+        <section className="pt-12 mt-8 border-t border-border/60 text-left space-y-6">
+          <div className="text-center max-w-2xl mx-auto">
+            <h2 className="text-2xl font-bold text-white">{t("methodology_title")}</h2>
+            <p className="text-sm text-gray-400 mt-1">{t("methodology_subtitle")}</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 rounded-xl bg-card/50 border border-border">
+              <h3 className="text-sm font-semibold text-primary mb-1.5">
+                {t("methodology_card1_title")}
+              </h3>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                {t("methodology_card1_desc")}
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-card/50 border border-border">
+              <h3 className="text-sm font-semibold text-blue-400 mb-1.5">
+                {t("methodology_card2_title")}
+              </h3>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                {t("methodology_card2_desc")}
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-card/50 border border-border">
+              <h3 className="text-sm font-semibold text-orange-400 mb-1.5">
+                {t("methodology_card3_title")}
+              </h3>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                {t("methodology_card3_desc")}
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   );

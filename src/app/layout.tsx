@@ -27,13 +27,6 @@ export default function RootLayout({
 } & { children: React.ReactNode }>) {
   return (
     <html lang="pt" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <head>
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9481255472542085"
-          crossOrigin="anonymous"
-        ></script>
-      </head>
       <body className="min-h-full flex flex-col">
         <Providers>
           <Header />

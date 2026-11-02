@@ -3,32 +3,81 @@
 import { useTranslation } from "react-i18next";
 
 export default function Footer() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+
+  const amazonDomain = i18n.language === "pt" ? "https://www.amazon.es" : "https://www.amazon.com";
+  const amazonTag = process.env.NEXT_PUBLIC_AMAZON_TAG || "neovoltpt-21";
 
   return (
     <footer className="w-full border-t border-border bg-card mt-12 py-8 text-sm">
       <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
         <div>
-          <h3 className="font-semibold text-white mb-4">EVRS</h3>
-          <p className="text-gray-400">
+          <h3 className="font-semibold text-white mb-3">EVRS | by NeoVolt-PT</h3>
+          <p className="text-gray-400 text-xs leading-relaxed">
             {t("description")}
           </p>
         </div>
-        
-        {/* Placeholder Google AdSense */}
-        <div className="border border-dashed border-border rounded flex items-center justify-center p-4 bg-background/50 h-24">
-          <span className="text-gray-500">{t("adsense_placeholder")}</span>
+
+        {/* Direct EV Sponsor / Partner Slot */}
+        <div className="border border-border rounded-xl p-4 bg-background/60 flex flex-col justify-between">
+          <div>
+            <span className="text-[10px] uppercase tracking-wider text-primary font-semibold block mb-1">
+              {t("adsense_placeholder")}
+            </span>
+            <h4 className="font-semibold text-white text-xs mb-1">
+              {t("sponsor_slot_title")}
+            </h4>
+            <p className="text-xs text-gray-400">
+              {t("sponsor_slot_desc")}
+            </p>
+          </div>
+          <a
+            href="mailto:filmfer@gmail.com?subject=EVRS%20Sponsorship%20Inquiry"
+            className="mt-3 text-xs font-semibold text-primary hover:underline inline-block"
+          >
+            {t("sponsor_slot_cta")}
+          </a>
         </div>
 
-        {/* Affiliate / Carbon Offset Placeholder */}
+        {/* Curated EV Affiliate & Partner Links */}
         <div className="flex flex-col gap-2">
-          <h3 className="font-semibold text-white mb-2">{t("eco_affiliates_title")}</h3>
-          <p className="text-gray-400 italic">{t("in_preparation")}</p>
+          <h3 className="font-semibold text-white mb-1">{t("eco_affiliates_title")}</h3>
+          <a
+            href={`${amazonDomain}/s?k=EV+Level+2+Charger+Type+2+Cable&tag=${amazonTag}`}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="text-xs text-gray-300 hover:text-primary transition"
+          >
+            🔌 {t("buy_accessories")} (Wallbox & Type 2 / CCS) →
+          </a>
+          <a
+            href="https://www.carvertical.com"
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="text-xs text-gray-300 hover:text-primary transition"
+          >
+            🛡️ {t("partner_vin_cta")}
+          </a>
+          <a
+            href="https://abetterrouteplanner.com"
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="text-xs text-gray-300 hover:text-primary transition"
+          >
+            🗺️ {t("partner_charging_title")} →
+          </a>
         </div>
       </div>
-      <div className="text-center text-gray-500 mt-8 pt-4 border-t border-border/50">
-        &copy; {new Date().getFullYear()} NeoVolt-PT. {t("rights_reserved")}
+
+      <div className="max-w-6xl mx-auto px-4 mt-6 pt-4 border-t border-border/50 text-center space-y-2">
+        <p className="text-[11px] text-gray-500 max-w-3xl mx-auto">
+          {t("affiliate_disclosure")}
+        </p>
+        <p className="text-xs text-gray-500">
+          &copy; {new Date().getFullYear()} NeoVolt-PT. {t("rights_reserved")}
+        </p>
       </div>
     </footer>
   );
 }
+

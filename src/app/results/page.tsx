@@ -5,6 +5,8 @@ import { useEffect, useState, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import { useTranslation } from "react-i18next";
 import { useUnit } from "@/components/Providers";
+import RaceGauge from "@/components/RaceGauge";
+import MonetizationCards from "@/components/MonetizationCards";
 import Link from "next/link";
 
 interface ReportItem {
@@ -29,12 +31,20 @@ function ReportCard({ report }: { report: ReportItem }) {
   const getEmbedUrl = (url: string) => {
     try {
       const urlObj = new URL(url);
+      if (urlObj.hostname.includes("youtube.com") || urlObj.hostname.includes("youtu.be")) {
+        const videoId =
+          urlObj.searchParams.get("v") ||
+          (urlObj.hostname.includes("youtu.be") ? urlObj.pathname.slice(1) : "");
+        if (videoId) {
+          return `https://www.youtube.com/embed/${videoId}`;
+        }
+      }
       if (urlObj.hostname.includes("reddit.com")) {
         urlObj.hostname = "www.redditmedia.com";
         urlObj.searchParams.set("embed", "true");
         return urlObj.toString();
       }
-      const blockedDomains = ["insideevs.com", "electrek.co", "cleantechnica.com"];
+      const blockedDomains = ["insideevs.com", "electrek.co", "cleantechnica.com", "electrive.com", "greencarreports.com"];
       if (blockedDomains.some((d) => urlObj.hostname.includes(d))) {
         return `https://corsproxy.io/?${encodeURIComponent(url)}`;
       }
@@ -357,6 +367,12 @@ function ResultsContent() {
         </div>
       ) : (
         <div className="space-y-6">
+          <RaceGauge
+            vehicleName={[brand, model && !fallbackActive ? model : ""].filter(Boolean).join(" ")}
+            reports={reports}
+            averageRangeKm={averageRangeKm}
+          />
+
           <div className="flex flex-wrap items-center gap-2 p-3 bg-card/50 border border-border rounded-xl">
             <span className="text-xs font-medium text-gray-400 mr-1">
               {t("filter_by_category")}
@@ -395,6 +411,8 @@ function ResultsContent() {
           {filteredReports.map((report) => (
             <ReportCard key={report.id} report={report} />
           ))}
+
+          <MonetizationCards brand={brand} model={!fallbackActive ? model : null} />
         </div>
       )}
     </>
