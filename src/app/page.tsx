@@ -54,35 +54,53 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="flex flex-col items-center justify-center p-8 bg-background text-foreground mt-12 mb-24">
-      <div className="max-w-3xl w-full space-y-8 text-center">
-        <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
-          {t("title_main")} <span className="text-primary">{t("title_sub")}</span>
+    <main className="flex flex-col items-center justify-center px-6 py-10 bg-transparent text-foreground mt-6 mb-20">
+      <div className="max-w-4xl w-full space-y-8 text-center">
+        {/* Live Telemetry Pulse Badge */}
+        <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-mono tracking-wider uppercase shadow-sm">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          {t("hero_live_badge")}
+        </div>
+
+        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-tight">
+          {t("title_main")}{" "}
+          <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-blue-400 bg-clip-text text-transparent">
+            {t("title_sub")}
+          </span>
         </h1>
-        <p className="text-xl text-gray-400">
+        <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto">
           {t("description")}
         </p>
 
         {/* Stats Cards */}
-        <div className="flex flex-wrap items-center justify-center gap-6 mt-2">
-          <div className="flex flex-col items-center p-4 bg-card/50 border border-border rounded-xl min-w-[140px]">
-            <span className="text-3xl font-bold text-primary">
+        <div className="flex flex-wrap items-center justify-center gap-5 mt-2">
+          <div className="glow-card flex flex-col items-center p-5 bg-card/80 backdrop-blur border border-border rounded-2xl min-w-[155px]">
+            <span className="text-3xl md:text-4xl font-mono font-extrabold text-emerald-400">
               {brandCount !== null ? brandCount : "—"}
             </span>
-            <span className="text-sm text-gray-400 mt-1">{t("brands")}</span>
+            <span className="text-xs uppercase tracking-wider text-gray-400 mt-1.5 font-semibold">
+              🏭 {t("brands")}
+            </span>
           </div>
-          <div className="flex flex-col items-center p-4 bg-card/50 border border-border rounded-xl min-w-[140px]">
-            <span className="text-3xl font-bold text-primary">
+          <div className="glow-card flex flex-col items-center p-5 bg-card/80 backdrop-blur border border-border rounded-2xl min-w-[155px]">
+            <span className="text-3xl md:text-4xl font-mono font-extrabold text-blue-400">
               {modelCount !== null ? modelCount : "—"}
             </span>
-            <span className="text-sm text-gray-400 mt-1">{t("models")}</span>
+            <span className="text-xs uppercase tracking-wider text-gray-400 mt-1.5 font-semibold">
+              🚗 {t("models")}
+            </span>
           </div>
           {reportCount !== null && (
-            <div className="flex flex-col items-center p-4 bg-card/50 border border-border rounded-xl min-w-[140px]">
-              <span className="text-3xl font-bold text-primary">
+            <div className="glow-card flex flex-col items-center p-5 bg-card/80 backdrop-blur border border-border rounded-2xl min-w-[155px]">
+              <span className="text-3xl md:text-4xl font-mono font-extrabold text-orange-400">
                 {reportCount}
               </span>
-              <span className="text-sm text-gray-400 mt-1">{t("reports_stat")}</span>
+              <span className="text-xs uppercase tracking-wider text-gray-400 mt-1.5 font-semibold">
+                📊 {t("reports_stat")}
+              </span>
             </div>
           )}
         </div>
@@ -133,15 +151,15 @@ export default function Home() {
             <p className="text-sm text-gray-400 mt-1">{t("methodology_subtitle")}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl bg-card/50 border border-border">
-              <h3 className="text-sm font-semibold text-primary mb-1.5">
+            <div className="glow-card p-5 rounded-2xl bg-card/70 border border-border">
+              <h3 className="text-sm font-semibold text-emerald-400 mb-1.5">
                 {t("methodology_card1_title")}
               </h3>
               <p className="text-xs text-gray-400 leading-relaxed">
                 {t("methodology_card1_desc")}
               </p>
             </div>
-            <div className="p-4 rounded-xl bg-card/50 border border-border">
+            <div className="glow-card p-5 rounded-2xl bg-card/70 border border-border">
               <h3 className="text-sm font-semibold text-blue-400 mb-1.5">
                 {t("methodology_card2_title")}
               </h3>
@@ -149,7 +167,7 @@ export default function Home() {
                 {t("methodology_card2_desc")}
               </p>
             </div>
-            <div className="p-4 rounded-xl bg-card/50 border border-border">
+            <div className="glow-card p-5 rounded-2xl bg-card/70 border border-border">
               <h3 className="text-sm font-semibold text-orange-400 mb-1.5">
                 {t("methodology_card3_title")}
               </h3>
@@ -157,6 +175,36 @@ export default function Home() {
                 {t("methodology_card3_desc")}
               </p>
             </div>
+          </div>
+        </section>
+
+        {/* SEO FAQ Section */}
+        <section className="pt-10 text-left space-y-4">
+          <h2 className="text-xl font-bold text-white text-center mb-4">
+            {t("faq_title")}
+          </h2>
+          <div className="space-y-3">
+            <details className="group p-4 rounded-xl bg-card/60 border border-border">
+              <summary className="cursor-pointer font-semibold text-sm text-white flex items-center justify-between">
+                <span>{t("faq_q1")}</span>
+                <span className="text-primary group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <p className="mt-2.5 text-xs text-gray-400 leading-relaxed">{t("faq_a1")}</p>
+            </details>
+            <details className="group p-4 rounded-xl bg-card/60 border border-border">
+              <summary className="cursor-pointer font-semibold text-sm text-white flex items-center justify-between">
+                <span>{t("faq_q2")}</span>
+                <span className="text-primary group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <p className="mt-2.5 text-xs text-gray-400 leading-relaxed">{t("faq_a2")}</p>
+            </details>
+            <details className="group p-4 rounded-xl bg-card/60 border border-border">
+              <summary className="cursor-pointer font-semibold text-sm text-white flex items-center justify-between">
+                <span>{t("faq_q3")}</span>
+                <span className="text-primary group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <p className="mt-2.5 text-xs text-gray-400 leading-relaxed">{t("faq_a3")}</p>
+            </details>
           </div>
         </section>
       </div>

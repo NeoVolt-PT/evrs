@@ -106,7 +106,15 @@ const resources = {
       "methodology_card2_title": "2. AI Categorization & Range Extraction",
       "methodology_card2_desc": "Every report is classified into Positives, Real Range, Battery, or Mechanical issues, extracting real-world km/miles autonomy figures.",
       "methodology_card3_title": "3. Bayesian 0–100 Race Gauge Index",
-      "methodology_card3_desc": "Scores are weighted by data volume and category severity—penalizing critical battery/mechanical faults while rewarding verified range and reliability."
+      "methodology_card3_desc": "Scores are weighted by data volume and category severity—penalizing critical battery/mechanical faults while rewarding verified range and reliability.",
+      "hero_live_badge": "LIVE GLOBAL EV TELEMETRY • DAILY AI & NHTSA UPDATES",
+      "faq_title": "Frequently Asked Questions (EV Range & Reliability)",
+      "faq_q1": "Why does real-world EV range differ from WLTP or EPA ratings?",
+      "faq_a1": "Official WLTP and EPA cycles are tested in controlled lab temperatures at moderate speeds. Real-world highway driving (120 km/h / 75 mph), winter heating, battery aging, and elevation changes typically reduce autonomy by 15% to 30%. EVRS aggregates real owner and road-test reports so you know what to expect before buying.",
+      "faq_q2": "How is the 0–100 EVRS Race Gauge Index calculated?",
+      "faq_a2": "The EVRS Index uses a volume-weighted Bayesian formula combining Positive owner feedback (+1.0), verified Real Range tests (+0.85), Mechanical issues (0.0), and high-severity Battery alerts (-0.15). Vehicles with higher report counts earn a High Volume confidence badge.",
+      "faq_q3": "What should I check before buying a used electric car?",
+      "faq_a3": "Always inspect State of Health (SoH) battery diagnostics, fast-charging (DCFC) session stability, suspension/drive-unit noise, and official NHTSA/EU safety recalls—all of which are tracked per model in EVRS."
     }
   },
   pt: {
@@ -192,7 +200,15 @@ const resources = {
       "methodology_card2_title": "2. Categorização IA e Extração de Autonomia",
       "methodology_card2_desc": "Cada relatório é classificado em Positivos, Autonomia Real, Bateria ou Mecânica, extraindo valores reais em km/milhas.",
       "methodology_card3_title": "3. Índice Bayesiano 0–100 em Manómetro de Corrida",
-      "methodology_card3_desc": "A pontuação pondera o volume de dados e a gravidade de cada categoria — penalizando falhas críticas de bateria/mecânica e premiando autonomia e fiabilidade comprovadas."
+      "methodology_card3_desc": "A pontuação pondera o volume de dados e a gravidade de cada categoria — penalizando falhas críticas de bateria/mecânica e premiando autonomia e fiabilidade comprovadas.",
+      "hero_live_badge": "TELEMETRIA EV GLOBAL EM TEMPO REAL • ATUALIZAÇÃO DIÁRIA IA & NHTSA",
+      "faq_title": "Perguntas Frequentes (Autonomia Real e Fiabilidade EV)",
+      "faq_q1": "Porque é que a autonomia real de um EV difere dos valores WLTP ou EPA?",
+      "faq_a1": "Os ciclos oficiais WLTP e EPA são medidos em laboratório a temperaturas amenas. Em autoestrada (120 km/h), no inverno ou com o uso do ar condicionado, a autonomia real pode variar entre 15% a 30%. O EVRS agrega testes de estrada e relatos reais para mostrar a autonomia verdadeira.",
+      "faq_q2": "Como é calculado o Índice EVRS de 0 a 100 no Manómetro?",
+      "faq_a2": "O Índice EVRS utiliza uma fórmula Bayesiana ponderada pelo volume de dados, combinando relatos Positivos (+1.0), testes de Autonomia Real (+0.85), falhas Mecânicas (0.0) e alertas críticos de Bateria (-0.15).",
+      "faq_q3": "O que devo verificar antes de comprar um carro elétrico usado?",
+      "faq_a3": "Verifique sempre o estado de saúde da bateria (SoH), estabilidade em carregamento rápido DC, histórico de recalls oficiais e eventuais ruídos na transmissão/suspensão — todos monitorizados por marca e modelo no EVRS."
     }
   }
 };
