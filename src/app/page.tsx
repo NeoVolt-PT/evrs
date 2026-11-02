@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import SearchBar, { VehicleOption } from "@/components/SearchBar";
-import AboutAndContact from "@/components/AboutAndContact";
+import MonetizationCards from "@/components/MonetizationCards";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
 import { trackEvent } from "@/lib/analytics";
@@ -244,72 +244,10 @@ export default function Home() {
           </div>
         )}
 
-        {/* Original Editorial & Methodology Section for SEO and User Trust */}
-        <section className="pt-12 mt-8 border-t border-border/60 text-left space-y-6">
-          <div className="text-center max-w-2xl mx-auto">
-            <h2 className="text-2xl font-bold text-white">{t("methodology_title")}</h2>
-            <p className="text-sm text-gray-400 mt-1">{t("methodology_subtitle")}</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="glow-card p-5 rounded-2xl bg-card/70 border border-border">
-              <h3 className="text-sm font-semibold text-emerald-400 mb-1.5">
-                {t("methodology_card1_title")}
-              </h3>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                {t("methodology_card1_desc")}
-              </p>
-            </div>
-            <div className="glow-card p-5 rounded-2xl bg-card/70 border border-border">
-              <h3 className="text-sm font-semibold text-blue-400 mb-1.5">
-                {t("methodology_card2_title")}
-              </h3>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                {t("methodology_card2_desc")}
-              </p>
-            </div>
-            <div className="glow-card p-5 rounded-2xl bg-card/70 border border-border">
-              <h3 className="text-sm font-semibold text-orange-400 mb-1.5">
-                {t("methodology_card3_title")}
-              </h3>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                {t("methodology_card3_desc")}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* SEO FAQ Section */}
-        <section className="pt-10 text-left space-y-4">
-          <h2 className="text-xl font-bold text-white text-center mb-4">
-            {t("faq_title")}
-          </h2>
-          <div className="space-y-3">
-            <details className="group p-4 rounded-xl bg-card/60 border border-border">
-              <summary className="cursor-pointer font-semibold text-sm text-white flex items-center justify-between">
-                <span>{t("faq_q1")}</span>
-                <span className="text-primary group-open:rotate-180 transition-transform">▼</span>
-              </summary>
-              <p className="mt-2.5 text-xs text-gray-400 leading-relaxed">{t("faq_a1")}</p>
-            </details>
-            <details className="group p-4 rounded-xl bg-card/60 border border-border">
-              <summary className="cursor-pointer font-semibold text-sm text-white flex items-center justify-between">
-                <span>{t("faq_q2")}</span>
-                <span className="text-primary group-open:rotate-180 transition-transform">▼</span>
-              </summary>
-              <p className="mt-2.5 text-xs text-gray-400 leading-relaxed">{t("faq_a2")}</p>
-            </details>
-            <details className="group p-4 rounded-xl bg-card/60 border border-border">
-              <summary className="cursor-pointer font-semibold text-sm text-white flex items-center justify-between">
-                <span>{t("faq_q3")}</span>
-                <span className="text-primary group-open:rotate-180 transition-transform">▼</span>
-              </summary>
-              <p className="mt-2.5 text-xs text-gray-400 leading-relaxed">{t("faq_a3")}</p>
-            </details>
-          </div>
-        </section>
-
-        {/* About Filipe Fernandes (jfilipefernandes.com) & Contact Form -> filmfer@gmail.com */}
-        <AboutAndContact />
+        {/* Contextual EV Monetization & Partner Cards right below vehicles */}
+        <div className="pt-4 text-left">
+          <MonetizationCards />
+        </div>
       </div>
     </main>
   );

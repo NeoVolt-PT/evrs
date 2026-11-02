@@ -23,16 +23,16 @@ export default function Header() {
           EVRS <span className="text-primary hidden sm:inline">| by NeoVolt-PT</span>
         </Link>
 
-        <div className="flex items-center gap-4 text-sm">
+        <div className="flex items-center gap-3 sm:gap-4 text-sm">
           <Link
-            href="/#about"
-            className="text-gray-300 hover:text-primary transition font-medium hidden sm:inline"
+            href="/about"
+            className="text-gray-300 hover:text-primary transition font-medium"
           >
             {t("nav_about")}
           </Link>
           <Link
-            href="/#contact"
-            className="text-gray-300 hover:text-primary transition font-medium hidden sm:inline"
+            href="/contact"
+            className="text-gray-300 hover:text-primary transition font-medium"
           >
             {t("nav_contact")}
           </Link>

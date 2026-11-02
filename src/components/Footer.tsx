@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
+import Link from "next/link";
 import { trackEvent } from "@/lib/analytics";
 
 export default function Footer() {
@@ -17,7 +18,7 @@ export default function Footer() {
           <p className="text-gray-400 text-xs leading-relaxed mb-3">
             {t("description")}
           </p>
-          <p className="text-xs text-gray-300">
+          <p className="text-xs text-gray-300 mb-3">
             {t("about_creator_label")}: <strong className="text-white">Filipe Fernandes</strong> —{" "}
             <a
               href="https://jfilipefernandes.com"
@@ -28,6 +29,14 @@ export default function Footer() {
               jfilipefernandes.com ↗
             </a>
           </p>
+          <div className="flex items-center gap-4 text-xs">
+            <Link href="/about" className="text-gray-300 hover:text-primary underline">
+              {t("nav_about")}
+            </Link>
+            <Link href="/contact" className="text-gray-300 hover:text-primary underline">
+              {t("nav_contact")}
+            </Link>
+          </div>
         </div>
 
         {/* Direct EV Sponsor / Partner Slot */}
