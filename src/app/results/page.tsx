@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useUnit } from "@/components/Providers";
 import RaceGauge from "@/components/RaceGauge";
 import MonetizationCards from "@/components/MonetizationCards";
+import { trackEvent } from "@/lib/analytics";
 import Link from "next/link";
 
 interface ReportItem {
@@ -106,7 +107,18 @@ function ReportCard({ report }: { report: ReportItem }) {
         <div className="mt-4 pt-3 border-t border-border/50 text-xs">
           <button 
             type="button"
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={() => {
+              const nextState = !isExpanded;
+              setIsExpanded(nextState);
+              if (nextState) {
+                trackEvent("view_original_source", {
+                  brand: report.vehicle_brand || "Unknown",
+                  model: report.vehicle_model || "All",
+                  category: report.type,
+                  source_url: report.source_link,
+                });
+              }
+            }}
             className="text-primary hover:underline flex items-center gap-1"
           >
             {isExpanded ? t("hide_original_source") : t("show_original_source")}
@@ -379,7 +391,10 @@ function ResultsContent() {
             </span>
             <button
               type="button"
-              onClick={() => setSelectedType("All")}
+              onClick={() => {
+                setSelectedType("All");
+                trackEvent("filter_category", { category: "All", brand: brand || "" });
+              }}
               className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
                 selectedType === "All"
                   ? "bg-white/15 text-white border-white/50 ring-2 ring-white/20"
@@ -392,7 +407,10 @@ function ResultsContent() {
               <button
                 key={cat.key}
                 type="button"
-                onClick={() => setSelectedType(cat.key)}
+                onClick={() => {
+                  setSelectedType(cat.key);
+                  trackEvent("filter_category", { category: cat.key, brand: brand || "" });
+                }}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${getCategoryFilterClasses(
                   cat.key,
                   selectedType === cat.key

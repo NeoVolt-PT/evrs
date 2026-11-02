@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
+import { trackEvent } from "@/lib/analytics";
 
 export interface VehicleOption {
   brand: string;
@@ -117,6 +118,10 @@ export default function SearchBar({ vehicles = [] }: { vehicles?: VehicleOption[
     : [];
 
   const navigateToResults = (brand: string, model: string) => {
+    trackEvent("search_vehicle", {
+      brand: brand || "Unknown",
+      model: model && model !== "General" ? model : "All",
+    });
     const searchParams = new URLSearchParams();
     if (brand) searchParams.set("brand", brand);
     if (model && model !== "General") searchParams.set("model", model);

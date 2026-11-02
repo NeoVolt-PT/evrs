@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
+import { trackEvent } from "@/lib/analytics";
 
 export default function Footer() {
   const { t, i18n } = useTranslation();
@@ -33,6 +34,12 @@ export default function Footer() {
           </div>
           <a
             href="mailto:filmfer@gmail.com?subject=EVRS%20Sponsorship%20Inquiry"
+            onClick={() =>
+              trackEvent("click_affiliate_partner", {
+                partner: "direct_sponsor_inquiry",
+                placement: "footer",
+              })
+            }
             className="mt-3 text-xs font-semibold text-primary hover:underline inline-block"
           >
             {t("sponsor_slot_cta")}
@@ -46,6 +53,12 @@ export default function Footer() {
             href={`${amazonDomain}/s?k=EV+Level+2+Charger+Type+2+Cable&tag=${amazonTag}`}
             target="_blank"
             rel="noopener noreferrer sponsored"
+            onClick={() =>
+              trackEvent("click_affiliate_partner", {
+                partner: "amazon_ev_accessories",
+                placement: "footer",
+              })
+            }
             className="text-xs text-gray-300 hover:text-primary transition"
           >
             🔌 {t("buy_accessories")} (Wallbox & Type 2 / CCS) →
@@ -54,6 +67,12 @@ export default function Footer() {
             href="https://www.carvertical.com"
             target="_blank"
             rel="noopener noreferrer sponsored"
+            onClick={() =>
+              trackEvent("click_affiliate_partner", {
+                partner: "carvertical_vin_check",
+                placement: "footer",
+              })
+            }
             className="text-xs text-gray-300 hover:text-primary transition"
           >
             🛡️ {t("partner_vin_cta")}
@@ -62,6 +81,12 @@ export default function Footer() {
             href="https://abetterrouteplanner.com"
             target="_blank"
             rel="noopener noreferrer sponsored"
+            onClick={() =>
+              trackEvent("click_affiliate_partner", {
+                partner: "abrp_route_planner",
+                placement: "footer",
+              })
+            }
             className="text-xs text-gray-300 hover:text-primary transition"
           >
             🗺️ {t("partner_charging_title")} →

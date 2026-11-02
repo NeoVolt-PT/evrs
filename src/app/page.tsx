@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import SearchBar, { VehicleOption } from "@/components/SearchBar";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
+import { trackEvent } from "@/lib/analytics";
 import Link from "next/link";
 
 export default function Home() {
@@ -107,6 +108,13 @@ export default function Home() {
                   <Link
                     key={`${v.brand}-${v.model}`}
                     href={`/results?${params.toString()}`}
+                    onClick={() =>
+                      trackEvent("search_vehicle", {
+                        brand: v.brand,
+                        model: v.model || "All",
+                        source: "home_quick_pill",
+                      })
+                    }
                     className="px-3 py-1.5 text-xs rounded-full bg-card border border-border hover:border-primary hover:text-primary transition-colors"
                   >
                     {v.brand}

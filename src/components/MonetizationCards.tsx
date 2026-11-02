@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
+import { trackEvent } from "@/lib/analytics";
 
 interface MonetizationCardsProps {
   brand?: string | null;
@@ -36,11 +37,17 @@ export default function MonetizationCards({ brand, model }: MonetizationCardsPro
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Card 1: EV Chargers & Accessories (Vehicle-Specific) */}
         <a
           href={accessoriesUrl}
           target="_blank"
           rel="noopener noreferrer sponsored"
+          onClick={() =>
+            trackEvent("click_affiliate_partner", {
+              partner: "amazon_ev_accessories",
+              vehicle: vehicleLabel,
+              placement: "results_cards",
+            })
+          }
           className="group p-4 rounded-xl bg-background border border-border hover:border-primary transition flex flex-col justify-between"
         >
           <div>
@@ -56,11 +63,17 @@ export default function MonetizationCards({ brand, model }: MonetizationCardsPro
           </span>
         </a>
 
-        {/* Card 2: Used EV Battery & VIN History Check */}
         <a
           href={vinCheckUrl}
           target="_blank"
           rel="noopener noreferrer sponsored"
+          onClick={() =>
+            trackEvent("click_affiliate_partner", {
+              partner: "carvertical_vin_check",
+              vehicle: vehicleLabel,
+              placement: "results_cards",
+            })
+          }
           className="group p-4 rounded-xl bg-background border border-border hover:border-blue-400 transition flex flex-col justify-between"
         >
           <div>
@@ -76,11 +89,17 @@ export default function MonetizationCards({ brand, model }: MonetizationCardsPro
           </span>
         </a>
 
-        {/* Card 3: Smart EV Route & Charging Planner */}
         <a
           href={routePlannerUrl}
           target="_blank"
           rel="noopener noreferrer sponsored"
+          onClick={() =>
+            trackEvent("click_affiliate_partner", {
+              partner: "abrp_route_planner",
+              vehicle: vehicleLabel,
+              placement: "results_cards",
+            })
+          }
           className="group p-4 rounded-xl bg-background border border-border hover:border-orange-400 transition flex flex-col justify-between"
         >
           <div>
@@ -99,3 +118,4 @@ export default function MonetizationCards({ brand, model }: MonetizationCardsPro
     </section>
   );
 }
+
