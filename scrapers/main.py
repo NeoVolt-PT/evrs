@@ -532,6 +532,22 @@ def main():
         except Exception as e:
             print(f"Error fetching total count: {e}")
             
+    # Save heartbeat file to keep GitHub Actions schedule active
+    heartbeat_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "last_run.json")
+    try:
+        with open(heartbeat_path, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "last_run_utc": datetime.utcnow().isoformat() + "Z",
+                    "new_registries_added": new_registries,
+                    "total_registries_in_db": total_registries,
+                },
+                f,
+                indent=2,
+            )
+    except Exception as e:
+        print(f"Warning writing last_run.json: {e}")
+
     # Send email
     send_summary_email(new_registries, total_registries)
 
