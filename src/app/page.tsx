@@ -133,7 +133,7 @@ export default function Home() {
               {brandCount !== null ? brandCount : "—"}
             </span>
             <span className="text-xs uppercase tracking-wider text-gray-400 mt-1.5 font-semibold">
-              🏭 {t("brands")}
+              {t("brands")}
             </span>
           </div>
           <div className="glow-card flex flex-col items-center p-5 bg-card/80 backdrop-blur border border-border rounded-2xl min-w-[155px]">
@@ -141,7 +141,7 @@ export default function Home() {
               {modelCount !== null ? modelCount : "—"}
             </span>
             <span className="text-xs uppercase tracking-wider text-gray-400 mt-1.5 font-semibold">
-              🚗 {t("models")}
+              {t("models")}
             </span>
           </div>
           {reportCount !== null && (
@@ -150,7 +150,7 @@ export default function Home() {
                 {reportCount}
               </span>
               <span className="text-xs uppercase tracking-wider text-gray-400 mt-1.5 font-semibold">
-                📊 {t("reports_stat")}
+                {t("reports_stat")}
               </span>
             </div>
           )}
@@ -162,7 +162,7 @@ export default function Home() {
           <div className="pt-6 text-left space-y-6">
             <div>
               <h2 className="text-xs uppercase tracking-wider text-emerald-400 font-semibold mb-3 text-center">
-                🔥 {t("browse_vehicles")}
+                {t("browse_vehicles")}
               </h2>
               <div className="flex flex-wrap justify-center gap-2">
                 {topVehicles.map((v) => {
@@ -202,7 +202,7 @@ export default function Home() {
             {latestVehicles.length > 0 && (
               <div className="pt-4 border-t border-border/40">
                 <h2 className="text-xs uppercase tracking-wider text-blue-400 font-semibold mb-3 text-center">
-                  🆕 {t("latest_vehicles")}
+                  {t("latest_vehicles")}
                 </h2>
                 <div className="flex flex-wrap justify-center gap-2">
                   {latestVehicles.map((v) => {
