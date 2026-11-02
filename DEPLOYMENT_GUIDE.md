@@ -13,7 +13,8 @@ O Supabase vai hospedar a base de dados PostgreSQL onde os dados do web scraper 
 4. No menu lateral esquerdo, vá a **SQL Editor** e clique em **"New Query"**.
 5. Copie todo o conteúdo do ficheiro `schema.sql` (disponível na raiz deste projeto) e cole-o no SQL Editor. Clique em **"Run"** para criar as tabelas `vehicles`, `reports` e `stats`.
 6. Vá a **Project Settings -> API**. Copie e guarde os seguintes valores (vai precisar deles mais à frente):
-   * `Project URL` (Este será o seu `SUPABASE_URL`)
+   * `Project URL` (Este será o seu `SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_URL`)
+   * `anon` public key (Este será o seu `NEXT_PUBLIC_SUPABASE_ANON_KEY` para o frontend)
    * `service_role` secret (Este será o seu `SUPABASE_SERVICE_KEY`. **Atenção:** Use a chave *service_role* para garantir que o script Python tem permissões de escrita absolutas em background).
 
 ---
@@ -67,9 +68,11 @@ A Vercel vai compilar e colocar o portal online na Internet com integração dir
 2. Clique em **"Add New"** -> **"Project"**.
 3. Importe o repositório que acabou de criar (`EVRS`).
 4. A Vercel deteta automaticamente que é um projeto Next.js. Não precisa de mudar as definições de compilação.
-5. Em **Environment Variables** na Vercel, introduza também o valor:
+5. Em **Environment Variables** na Vercel, introduza os seguintes valores:
+   * `NEXT_PUBLIC_SUPABASE_URL` (O `Project URL` do seu projeto Supabase)
+   * `NEXT_PUBLIC_SUPABASE_ANON_KEY` (A chave pública `anon` do seu projeto Supabase)
    * `RESEND_API_KEY` (Para ser consumido pelo sistema interno de gestão de alertas em React).
 6. Clique em **Deploy**.
 
 **Parabéns!** O seu portal "EVRS by NeoVolt-PT" está agora online na Internet!
-Os agentes de web scraping vão correr em background a cada domingo às 00:00 UTC sem custos de servidor e alimentar continuamente o portal com novos dados.
+Os agentes de web scraping vão correr em background diariamente às 00:00 UTC sem custos de servidor e alimentar continuamente o portal com novos dados.

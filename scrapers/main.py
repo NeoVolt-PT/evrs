@@ -1,4 +1,6 @@
 import os
+import re
+import time
 import json
 import feedparser
 import requests
@@ -61,71 +63,317 @@ def fetch_rss_data():
             })
     return articles
 
+BRAND_ALIASES = {
+    "vw": "Volkswagen",
+    "volkswagen": "Volkswagen",
+    "mercedes": "Mercedes-Benz",
+    "mercedes-benz": "Mercedes-Benz",
+    "mercedes benz": "Mercedes-Benz",
+    "chevy": "Chevrolet",
+    "chevrolet": "Chevrolet",
+    "lucid motors": "Lucid",
+    "lucid": "Lucid",
+    "tesla": "Tesla",
+    "hyundai": "Hyundai",
+    "kia": "Kia",
+    "ford": "Ford",
+    "rivian": "Rivian",
+    "bmw": "BMW",
+    "byd": "BYD",
+    "mg": "MG",
+    "nio": "Nio",
+    "xpeng": "XPeng",
+    "zeekr": "Zeekr",
+    "polestar": "Polestar",
+    "volvo": "Volvo",
+    "porsche": "Porsche",
+    "audi": "Audi",
+    "nissan": "Nissan",
+    "peugeot": "Peugeot",
+    "renault": "Renault",
+    "fiat": "Fiat",
+    "skoda": "Skoda",
+    "škoda": "Skoda",
+    "cupra": "Cupra",
+    "dacia": "Dacia",
+    "toyota": "Toyota",
+    "subaru": "Subaru",
+    "honda": "Honda",
+    "lexus": "Lexus",
+    "mazda": "Mazda",
+    "mini": "Mini",
+    "smart": "Smart",
+    "jaguar": "Jaguar",
+    "aston martin": "Aston Martin",
+    "omoda": "Omoda",
+}
+
+VALID_REPORT_TYPES = {"Real Range", "Mechanical", "Battery", "Positives"}
+
+# Prioritized list of Groq chat/text models (updated for current GroqCloud production models)
+PREFERRED_GROQ_MODELS = [
+    os.getenv("GROQ_MODEL", "").strip(),
+    "openai/gpt-oss-20b",
+    "openai/gpt-oss-120b",
+    "qwen/qwen3.8-27b",
+    "meta-llama/llama-4-scout-17b-16e-instruct",
+    "meta-llama/llama-4-maverick-17b-128e-instruct",
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+    "gemma2-9b-it",
+]
+PREFERRED_GROQ_MODELS = [m for m in PREFERRED_GROQ_MODELS if m]
+
+NON_CHAT_MODEL_KEYWORDS = (
+    "whisper",
+    "orpheus",
+    "guard",
+    "safeguard",
+    "tts",
+    "playai",
+    "embed",
+    "allam",
+)
+
+CANDIDATE_MODELS = []
+
+
+def init_groq_models():
+    """Discovers active chat models available to this GROQ_API_KEY, ordered by preference."""
+    global CANDIDATE_MODELS
+    if not groq_client:
+        CANDIDATE_MODELS = list(PREFERRED_GROQ_MODELS)
+        return
+
+    try:
+        models_resp = groq_client.models.list()
+        available_ids = [
+            m.id for m in getattr(models_resp, "data", [])
+            if getattr(m, "id", None)
+            and not any(kw in m.id.lower() for kw in NON_CHAT_MODEL_KEYWORDS)
+        ]
+        if available_ids:
+            ordered = [m for m in PREFERRED_GROQ_MODELS if m in available_ids]
+            for m in available_ids:
+                if m not in ordered:
+                    ordered.append(m)
+            CANDIDATE_MODELS = ordered
+            print(f"Discovered active Groq chat models: {CANDIDATE_MODELS[:5]}")
+            return
+    except Exception as e:
+        print(f"Could not list Groq models dynamically, using fallback list: {e}")
+
+    CANDIDATE_MODELS = list(PREFERRED_GROQ_MODELS)
+
+
+init_groq_models()
+
+
+def parse_json_response(raw_content: str):
+    """Extracts and parses a JSON object from LLM text response."""
+    if not raw_content:
+        return None
+    cleaned = raw_content.strip()
+    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*```$", "", cleaned)
+    try:
+        return json.loads(cleaned)
+    except Exception:
+        match = re.search(r"\{[\s\S]*\}", cleaned)
+        if match:
+            return json.loads(match.group(0))
+        raise
+
+
+def normalize_brand_and_model(brand: str, model: str):
+    """Normalizes brand aliases and cleans model names for consistent DB records."""
+    clean_brand = (brand or "").strip()
+    clean_model = (model or "").strip() or "General"
+
+    lower_brand = clean_brand.lower()
+    if lower_brand in BRAND_ALIASES:
+        clean_brand = BRAND_ALIASES[lower_brand]
+
+    if clean_brand and clean_model.lower().startswith(clean_brand.lower() + " "):
+        clean_model = clean_model[len(clean_brand):].strip()
+
+    if clean_model.lower() in {"unknown", "multiple", "n/a", "none", ""}:
+        clean_model = "General"
+
+    return clean_brand, clean_model
+
+
 def analyze_with_ai(text: str):
     """
     Uses Groq LLM to categorize, translate, and extract structured EV data.
+    Automatically falls back across available Groq models if a model is deprecated/unavailable.
     """
+    global CANDIDATE_MODELS
     if not groq_client:
         print("Groq API key missing. Skipping AI analysis.")
         return None
+
+    if not CANDIDATE_MODELS:
+        init_groq_models()
 
     prompt = f"""
     Analyze the following text about Electric Vehicles.
     Extract the following information in strict JSON format:
     {{
-        "brand": "Brand Name (e.g., Tesla, Hyundai, Ford). Guess from context if obvious.",
-        "model": "Model Name (e.g., Model 3, Ioniq 5). Use 'Unknown' or 'Multiple' if not specified but the brand is known.",
+        "brand": "Brand Name (e.g., Tesla, Hyundai, Ford, Volkswagen, Mercedes-Benz). Guess from context if obvious.",
+        "model": "Model Name (e.g., Model 3, Ioniq 5, ID.4, Mustang Mach-E). Use 'General' if not specified but the brand is known.",
         "type": "Must be exactly one of: 'Real Range', 'Mechanical', 'Battery', or 'Positives'. Choose the best fit.",
         "description": "Summarize or translate the main point to International English in 1-3 sentences. Focus on EV reliability, range, issues, or positive feedback.",
         "language_original": "e.g., 'EN', 'PT', 'FR'",
-        "contradictory_info": true or false (boolean)
+        "contradictory_info": true or false (boolean),
+        "estimated_range_km": number or null (if a specific real-world range distance is mentioned in the text, convert it to kilometers as a number between 50 and 1500; otherwise null)
     }}
     If the text is completely unrelated to electric vehicles or contains zero useful feedback/news about an EV, return {{"error": "Not relevant"}}.
     Be more lenient: if it mentions an EV brand, try your best to extract it.
+    Return ONLY valid JSON.
     
     Text: {text}
     """
 
+    for model_name in list(CANDIDATE_MODELS):
+        try:
+            try:
+                response = groq_client.chat.completions.create(
+                    messages=[{"role": "user", "content": prompt}],
+                    model=model_name,
+                    response_format={"type": "json_object"},
+                    temperature=0.1,
+                )
+            except Exception as format_err:
+                err_str = str(format_err).lower()
+                if "response_format" in err_str or "json_object" in err_str:
+                    response = groq_client.chat.completions.create(
+                        messages=[{"role": "user", "content": prompt}],
+                        model=model_name,
+                        temperature=0.1,
+                    )
+                else:
+                    raise format_err
+
+            content = response.choices[0].message.content
+            return parse_json_response(content)
+
+        except Exception as e:
+            err_msg = str(e)
+            err_lower = err_msg.lower()
+
+            if (
+                "model_not_found" in err_lower
+                or "model_decommissioned" in err_lower
+                or "does not exist" in err_lower
+                or "do not have access" in err_lower
+                or "404" in err_lower
+            ):
+                print(f"Model '{model_name}' unavailable ({err_msg}). Switching to next available model...")
+                if model_name in CANDIDATE_MODELS and len(CANDIDATE_MODELS) > 1:
+                    CANDIDATE_MODELS.remove(model_name)
+                continue
+
+            if "429" in err_lower or "rate_limit" in err_lower or "rate limit" in err_lower:
+                print(f"Rate limit hit on '{model_name}', waiting 2s and trying next model...")
+                time.sleep(2)
+                continue
+
+            print(f"Error during AI analysis with model '{model_name}': {e}")
+            return None
+
+    print("Error during AI analysis: No accessible Groq chat models succeeded.")
+    return None
+
+def update_vehicle_stats(vehicle_id: str, new_range_km=None):
+    """Updates the stats table (total_reports, average_range_km, average_range_miles) for a vehicle."""
+    if not supabase:
+        return
+
     try:
-        response = groq_client.chat.completions.create(
-            messages=[{"role": "user", "content": prompt}],
-            model="llama-3.1-8b-instant",
-            response_format={"type": "json_object"},
-            temperature=0.1
-        )
-        return json.loads(response.choices[0].message.content)
+        reports_res = supabase.table('reports').select('*', count='exact').eq('vehicle_id', vehicle_id).execute()
+        total_reports = reports_res.count if reports_res.count is not None else len(reports_res.data or [])
+
+        range_values = [
+            float(r['estimated_range_km'])
+            for r in (reports_res.data or [])
+            if r.get('estimated_range_km') is not None
+        ]
+        if not range_values and new_range_km is not None:
+            range_values = [float(new_range_km)]
+
+        avg_km = round(sum(range_values) / len(range_values), 2) if range_values else None
+        avg_miles = round(avg_km * 0.621371, 2) if avg_km is not None else None
+
+        stats_payload = {
+            "vehicle_id": vehicle_id,
+            "total_reports": total_reports,
+            "last_updated": datetime.now().isoformat(),
+        }
+        if avg_km is not None:
+            stats_payload["average_range_km"] = avg_km
+            stats_payload["average_range_miles"] = avg_miles
+
+        supabase.table('stats').upsert(stats_payload, on_conflict="vehicle_id").execute()
     except Exception as e:
-        print(f"Error during AI analysis: {e}")
-        return None
+        print(f"Warning: could not update vehicle stats: {e}")
+
 
 def save_to_supabase(data, link):
-    """Saves the structured data to Supabase (vehicles and reports) and returns True if successful."""
+    """Saves the structured data to Supabase (vehicles, reports, and stats) and returns True if successful."""
     if not supabase:
         print("Supabase credentials missing. Mocking save operation...")
         print(f"Would save: {data}")
         return False
 
     try:
+        brand, model = normalize_brand_and_model(data.get('brand', ''), data.get('model', ''))
+        if not brand:
+            return False
+
+        report_type = data.get('type', 'Positives')
+        if report_type not in VALID_REPORT_TYPES:
+            report_type = 'Positives'
+
+        contradictory_info = bool(data.get('contradictory_info', False))
+        raw_range = data.get('estimated_range_km')
+        estimated_range_km = None
+        if isinstance(raw_range, (int, float)) and 50 <= float(raw_range) <= 1500:
+            estimated_range_km = round(float(raw_range), 2)
+
         # 1. Upsert Vehicle
         vehicle_res = supabase.table('vehicles').upsert(
-            {"brand": data['brand'], "model": data['model']},
+            {"brand": brand, "model": model},
             on_conflict="brand,model"
         ).execute()
 
         if vehicle_res.data:
             vehicle_id = vehicle_res.data[0]['id']
-            
-            # 2. Insert Report
-            supabase.table('reports').insert({
+
+            report_payload = {
                 "vehicle_id": vehicle_id,
-                "type": data['type'],
-                "description": data['description'],
+                "type": report_type,
+                "description": data.get('description', ''),
                 "source_link": link,
                 "source_count": 1,
                 "report_date": datetime.now().strftime("%Y-%m-%d"),
-                "language_original": data['language_original']
-            }).execute()
-            print(f"Saved report for {data['brand']} {data['model']} to DB.")
+                "language_original": (data.get('language_original') or 'EN')[:10],
+                "contradictory_info": contradictory_info,
+                "estimated_range_km": estimated_range_km,
+            }
+
+            # 2. Insert Report (fallback without optional columns if DB migration hasn't been applied yet)
+            try:
+                supabase.table('reports').insert(report_payload).execute()
+            except Exception:
+                report_payload.pop("contradictory_info", None)
+                report_payload.pop("estimated_range_km", None)
+                supabase.table('reports').insert(report_payload).execute()
+
+            # 3. Update Vehicle Stats
+            update_vehicle_stats(vehicle_id, estimated_range_km)
+
+            print(f"Saved report for {brand} {model} to DB.")
             return True
     except Exception as e:
         print(f"Error saving to DB: {e}")
