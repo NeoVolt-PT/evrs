@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import SearchBar, { VehicleOption } from "@/components/SearchBar";
+import AboutAndContact from "@/components/AboutAndContact";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
 import { trackEvent } from "@/lib/analytics";
@@ -306,6 +307,9 @@ export default function Home() {
             </details>
           </div>
         </section>
+
+        {/* About Filipe Fernandes (jfilipefernandes.com) & Contact Form -> filmfer@gmail.com */}
+        <AboutAndContact />
       </div>
     </main>
   );

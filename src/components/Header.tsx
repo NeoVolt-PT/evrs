@@ -24,6 +24,19 @@ export default function Header() {
         </Link>
 
         <div className="flex items-center gap-4 text-sm">
+          <Link
+            href="/#about"
+            className="text-gray-300 hover:text-primary transition font-medium hidden sm:inline"
+          >
+            {t("nav_about")}
+          </Link>
+          <Link
+            href="/#contact"
+            className="text-gray-300 hover:text-primary transition font-medium hidden sm:inline"
+          >
+            {t("nav_contact")}
+          </Link>
+
           <button
             type="button"
             onClick={toggleUnit}

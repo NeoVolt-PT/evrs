@@ -13,9 +13,20 @@ export default function Footer() {
     <footer className="w-full border-t border-border bg-card mt-12 py-8 text-sm">
       <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
         <div>
-          <h3 className="font-semibold text-white mb-3">EVRS | by NeoVolt-PT</h3>
-          <p className="text-gray-400 text-xs leading-relaxed">
+          <h3 className="font-semibold text-white mb-2">EVRS | by NeoVolt-PT</h3>
+          <p className="text-gray-400 text-xs leading-relaxed mb-3">
             {t("description")}
+          </p>
+          <p className="text-xs text-gray-300">
+            {t("about_creator_label")}: <strong className="text-white">Filipe Fernandes</strong> —{" "}
+            <a
+              href="https://jfilipefernandes.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline font-medium"
+            >
+              jfilipefernandes.com ↗
+            </a>
           </p>
         </div>
 
