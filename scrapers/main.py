@@ -249,10 +249,33 @@ def parse_json_response(raw_content: str):
         raise
 
 
+INVALID_MODELS = {
+    "general",
+    "unknown",
+    "multiple",
+    "n/a",
+    "none",
+    "all",
+    "ev",
+    "evs",
+    "electric",
+    "unspecified",
+    "various",
+    "lineup",
+    "models",
+    "car",
+    "cars",
+    "suv",
+    "sedan",
+    "truck",
+    "",
+}
+
+
 def normalize_brand_and_model(brand: str, model: str):
-    """Normalizes brand aliases and cleans model names for consistent DB records."""
+    """Normalizes brand aliases and enforces a specific model name (rejects brand-only records)."""
     clean_brand = (brand or "").strip()
-    clean_model = (model or "").strip() or "General"
+    clean_model = (model or "").strip()
 
     lower_brand = clean_brand.lower()
     if lower_brand in BRAND_ALIASES:
@@ -261,8 +284,12 @@ def normalize_brand_and_model(brand: str, model: str):
     if clean_brand and clean_model.lower().startswith(clean_brand.lower() + " "):
         clean_model = clean_model[len(clean_brand):].strip()
 
-    if clean_model.lower() in {"unknown", "multiple", "n/a", "none", ""}:
-        clean_model = "General"
+    if (
+        clean_model.lower() in INVALID_MODELS
+        or clean_model.lower() == clean_brand.lower()
+        or len(clean_model) < 2
+    ):
+        return clean_brand, ""
 
     return clean_brand, clean_model
 
@@ -282,18 +309,19 @@ def analyze_with_ai(text: str):
 
     prompt = f"""
     Analyze the following text about Electric Vehicles.
+    IMPORTANT: We ONLY accept reports that refer to a SPECIFIC Electric Vehicle Brand AND a SPECIFIC Model (e.g., Tesla Model 3, Tesla Model Y, Hyundai Ioniq 5, Kia EV6, Volkswagen ID.4, Ford Mustang Mach-E, Rivian R1T, BYD Seal, Volvo EX30, Porsche Taycan, Chevrolet Bolt EV, BMW i4, etc.).
+    If the text is only about a brand in general, stock market news, or does not mention a specific EV model, return {{"error": "No specific EV model"}}.
+
     Extract the following information in strict JSON format:
     {{
-        "brand": "Brand Name (e.g., Tesla, Hyundai, Ford, Volkswagen, Mercedes-Benz). Guess from context if obvious.",
-        "model": "Model Name (e.g., Model 3, Ioniq 5, ID.4, Mustang Mach-E). Use 'General' if not specified but the brand is known.",
+        "brand": "Exact Brand Name (e.g., Tesla, Hyundai, Ford, Volkswagen, Mercedes-Benz, BYD, Kia, Rivian, BMW, Volvo).",
+        "model": "Exact Specific Model Name (e.g., Model 3, Model Y, Ioniq 5, ID.4, Mustang Mach-E, EV6, R1T, Seal, EX30). NEVER use 'General', 'Unknown', or 'Multiple'.",
         "type": "Must be exactly one of: 'Real Range', 'Mechanical', 'Battery', or 'Positives'. Choose the best fit.",
-        "description": "Summarize or translate the main point to International English in 1-3 sentences. Focus on EV reliability, range, issues, or positive feedback.",
+        "description": "Write a clear, comprehensive, well-structured technical summary in International English with 4 to 6 complete sentences (minimum 60 words). Explain the exact context, real-world range or consumption figures, battery/charging behavior, mechanical details, driving conditions, and key takeaways. Wrap the 4 to 8 most important technical keywords, metrics, or findings in double asterisks like **450 km real range**, **LFP battery**, **fast charging**, **heat pump**, or **ICCU failure** so they can be highlighted in the UI.",
         "language_original": "e.g., 'EN', 'PT', 'FR'",
         "contradictory_info": true or false (boolean),
         "estimated_range_km": number or null (if a specific real-world range distance is mentioned in the text, convert it to kilometers as a number between 50 and 1500; otherwise null)
     }}
-    If the text is completely unrelated to electric vehicles or contains zero useful feedback/news about an EV, return {{"error": "Not relevant"}}.
-    Be more lenient: if it mentions an EV brand, try your best to extract it.
     Return ONLY valid JSON.
     
     Text: {text}
@@ -392,7 +420,8 @@ def save_to_supabase(data, link):
 
     try:
         brand, model = normalize_brand_and_model(data.get('brand', ''), data.get('model', ''))
-        if not brand:
+        if not brand or not model:
+            print(f" -> Skipped: requires both specific Brand and Model (got brand='{brand}', model='{model}').")
             return False
 
         report_type = data.get('type', 'Positives')

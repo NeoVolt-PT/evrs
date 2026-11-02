@@ -59,6 +59,62 @@ const BRAND_ALIASES: Record<string, string> = {
   "škoda": "Skoda",
 };
 
+const MODEL_TO_BRAND: Record<string, { brand: string; model: string }> = {
+  "model 3": { brand: "Tesla", model: "Model 3" },
+  "model y": { brand: "Tesla", model: "Model Y" },
+  "model s": { brand: "Tesla", model: "Model S" },
+  "model x": { brand: "Tesla", model: "Model X" },
+  "cybertruck": { brand: "Tesla", model: "Cybertruck" },
+  "ioniq 5": { brand: "Hyundai", model: "Ioniq 5" },
+  "ioniq 6": { brand: "Hyundai", model: "Ioniq 6" },
+  "ioniq 9": { brand: "Hyundai", model: "Ioniq 9" },
+  "kona electric": { brand: "Hyundai", model: "Kona Electric" },
+  "ev3": { brand: "Kia", model: "EV3" },
+  "ev6": { brand: "Kia", model: "EV6" },
+  "ev9": { brand: "Kia", model: "EV9" },
+  "niro ev": { brand: "Kia", model: "Niro EV" },
+  "id.3": { brand: "Volkswagen", model: "ID.3" },
+  "id.4": { brand: "Volkswagen", model: "ID.4" },
+  "id.7": { brand: "Volkswagen", model: "ID.7" },
+  "id. buzz": { brand: "Volkswagen", model: "ID. Buzz" },
+  "mustang mach-e": { brand: "Ford", model: "Mustang Mach-E" },
+  "mach-e": { brand: "Ford", model: "Mustang Mach-E" },
+  "f-150 lightning": { brand: "Ford", model: "F-150 Lightning" },
+  "r1t": { brand: "Rivian", model: "R1T" },
+  "r1s": { brand: "Rivian", model: "R1S" },
+  "r2": { brand: "Rivian", model: "R2" },
+  "seal": { brand: "BYD", model: "Seal" },
+  "dolphin": { brand: "BYD", model: "Dolphin" },
+  "atto 3": { brand: "BYD", model: "Atto 3" },
+  "seagull": { brand: "BYD", model: "Seagull" },
+  "ex30": { brand: "Volvo", model: "EX30" },
+  "ex90": { brand: "Volvo", model: "EX90" },
+  "taycan": { brand: "Porsche", model: "Taycan" },
+  "macan ev": { brand: "Porsche", model: "Macan EV" },
+  "bolt ev": { brand: "Chevrolet", model: "Bolt EV" },
+  "bolt euv": { brand: "Chevrolet", model: "Bolt EUV" },
+  "equinox ev": { brand: "Chevrolet", model: "Equinox EV" },
+  "blazer ev": { brand: "Chevrolet", model: "Blazer EV" },
+  "leaf": { brand: "Nissan", model: "Leaf" },
+  "ariya": { brand: "Nissan", model: "Ariya" },
+  "i4": { brand: "BMW", model: "i4" },
+  "ix": { brand: "BMW", model: "iX" },
+  "i5": { brand: "BMW", model: "i5" },
+  "q4 e-tron": { brand: "Audi", model: "Q4 e-tron" },
+  "q8 e-tron": { brand: "Audi", model: "Q8 e-tron" },
+  "zoe": { brand: "Renault", model: "Zoe" },
+  "megane e-tech": { brand: "Renault", model: "Megane E-Tech" },
+  "scenic e-tech": { brand: "Renault", model: "Scenic E-Tech" },
+  "enyaq": { brand: "Skoda", model: "Enyaq" },
+  "born": { brand: "Cupra", model: "Born" },
+};
+
+function isSpecificModel(model?: string): boolean {
+  if (!model) return false;
+  const m = model.trim().toLowerCase();
+  return !["general", "unknown", "multiple", "n/a", "none", "all", "ev", ""].includes(m);
+}
+
 export default function SearchBar({ vehicles = [] }: { vehicles?: VehicleOption[] }) {
   const [query, setQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -100,10 +156,22 @@ export default function SearchBar({ vehicles = [] }: { vehicles?: VehicleOption[
       if (foundBrand) {
         parsedBrand = foundBrand;
         parsedModel = trimmed.slice(foundBrand.length).trim();
+      } else if (MODEL_TO_BRAND[lowerQuery]) {
+        parsedBrand = MODEL_TO_BRAND[lowerQuery].brand;
+        parsedModel = MODEL_TO_BRAND[lowerQuery].model;
       } else {
-        const parts = trimmed.split(/\s+/);
-        parsedBrand = BRAND_ALIASES[parts[0].toLowerCase()] || parts[0];
-        parsedModel = parts.slice(1).join(" ");
+        // Check if query matches a specific model in our database vehicles list
+        const dbModelMatch = vehicles.find(
+          (v) => isSpecificModel(v.model) && v.model.toLowerCase() === lowerQuery
+        );
+        if (dbModelMatch) {
+          parsedBrand = dbModelMatch.brand;
+          parsedModel = dbModelMatch.model;
+        } else {
+          const parts = trimmed.split(/\s+/);
+          parsedBrand = BRAND_ALIASES[parts[0].toLowerCase()] || parts[0];
+          parsedModel = parts.slice(1).join(" ");
+        }
       }
     }
   }
@@ -111,10 +179,11 @@ export default function SearchBar({ vehicles = [] }: { vehicles?: VehicleOption[
   const matchingSuggestions = query.trim()
     ? vehicles
         .filter((v) => {
-          const full = `${v.brand} ${v.model === "General" ? "" : v.model}`.trim().toLowerCase();
+          if (!isSpecificModel(v.model)) return false;
+          const full = `${v.brand} ${v.model}`.trim().toLowerCase();
           return full.includes(query.trim().toLowerCase());
         })
-        .slice(0, 6)
+        .slice(0, 8)
     : [];
 
   const navigateToResults = (brand: string, model: string) => {

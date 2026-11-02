@@ -24,6 +24,81 @@ interface ReportItem {
   vehicle_model?: string;
 }
 
+const EV_KEYWORD_REGEX =
+  /(\*\*[^*]+\*\*|\b\d+(?:[.,]\d+)?\s*(?:km\/h|km|miles|mi|kWh|kW|mph|%|°C|°F|V|A|Wh\/km|mi\/kWh|years|anos|months|meses)\b|\b(?:real[- ]world range|range|autonomia|battery|bateria|batteries|fast[- ]charging|supercharger|charging|carregamento|degradation|degradação|WLTP|EPA|LFP|NMC|BMS|ICCU|12V|heat pump|bomba de calor|recall|software|OTA|inverter|inversor|motor|suspension|suspensão|brakes|travões|efficiency|eficiência|consumption|consumo|winter|inverno|highway|autoestrada|AWD|RWD|FWD|NACS|CCS|Type 2|regenerative braking|regeneração|state of health|SoH|thermal|warranty|garantia|reliability|fiabilidade)\b)/gi;
+
+function renderHighlightedText(text: string) {
+  const parts = text.split(EV_KEYWORD_REGEX);
+  return parts.map((part, idx) => {
+    if (!part) return null;
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      return (
+        <span
+          key={idx}
+          className="text-primary font-semibold bg-primary/10 px-1.5 py-0.5 rounded"
+        >
+          {part.slice(2, -2)}
+        </span>
+      );
+    }
+    if (EV_KEYWORD_REGEX.test(part)) {
+      EV_KEYWORD_REGEX.lastIndex = 0;
+      return (
+        <span
+          key={idx}
+          className="text-primary font-semibold bg-primary/10 px-1 py-0.5 rounded"
+        >
+          {part}
+        </span>
+      );
+    }
+    EV_KEYWORD_REGEX.lastIndex = 0;
+    return <span key={idx}>{part}</span>;
+  });
+}
+
+function getExpandedContextText(
+  report: ReportItem,
+  lang: string,
+  formattedRange: string | null
+): string | null {
+  if ((report.description || "").length >= 240) return null;
+
+  const vehicleName = [
+    report.vehicle_brand,
+    report.vehicle_model &&
+    !["General", "Unknown", "Multiple"].includes(report.vehicle_model)
+      ? report.vehicle_model
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ") || "EV";
+
+  const isPt = lang === "pt";
+
+  if (report.type === "Real Range") {
+    return isPt
+      ? `Análise complementar para ${vehicleName}: Este registo foca-se no desempenho de **autonomia** e **eficiência** energética em utilização real${formattedRange ? ` (estimativa registada de **${formattedRange}**)` : ""}. Em comparação com os ciclos **WLTP** e **EPA**, fatores como velocidade em **autoestrada**, climatização e gestão térmica da **bateria** influenciam diretamente o **consumo** final.`
+      : `Additional telemetry context for ${vehicleName}: This report evaluates **real-world range** and energy **efficiency** under practical driving conditions${formattedRange ? ` (recorded estimate of **${formattedRange}**)` : ""}. Compared to official **WLTP** and **EPA** ratings, **highway** speeds, cabin heating, and **battery** thermal management directly impact net **consumption**.`;
+  }
+
+  if (report.type === "Battery") {
+    return isPt
+      ? `Análise complementar para ${vehicleName}: Este alerta incide sobre o sistema de **bateria** de alta tensão, células **LFP** / **NMC**, curva de **carregamento** rápido ou gestão eletrónica **BMS** / **12V**. Recomenda-se monitorizar o estado de saúde (**SoH**), estabilidade em postos **CCS** e eventuais atualizações de **software** (**OTA**) ou campanhas de **recall**.`
+      : `Additional telemetry context for ${vehicleName}: This report highlights high-voltage **battery** behavior, **fast-charging** stability, **BMS** management, or **12V** auxiliary system performance. Owners and buyers should verify State of Health (**SoH**) diagnostics, **OTA** **software** updates, and any applicable **recall** bulletins.`;
+  }
+
+  if (report.type === "Mechanical") {
+    return isPt
+      ? `Análise complementar para ${vehicleName}: Este registo documenta componentes de **fiabilidade** física, incluindo **motor** elétrico, **inversor**, **suspensão**, direção ou sistema de **travões**. A verificação preventiva durante o período de **garantia** ajuda a mitigar custos de manutenção inesperados.`
+      : `Additional telemetry context for ${vehicleName}: This entry documents physical **reliability** and hardware components such as the drive **motor**, **inverter**, **suspension**, steering, or **brakes**. Proactive inspection under factory **warranty** is recommended to prevent long-term wear issues.`;
+  }
+
+  return isPt
+    ? `Análise complementar para ${vehicleName}: Os indicadores deste relato destacam positivamente a **fiabilidade**, conforto de condução, **eficiência** elétrica e integração de **software** do veículo, contribuindo favoravelmente para a pontuação global no Índice EVRS.`
+    : `Additional telemetry context for ${vehicleName}: This report highlights positive owner satisfaction, driving dynamics, electrical **efficiency**, and **software** integration, contributing favorably to the vehicle's overall **reliability** score in the EVRS Index.`;
+}
+
 function ReportCard({ report }: { report: ReportItem }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { t, i18n } = useTranslation();
@@ -40,18 +115,9 @@ function ReportCard({ report }: { report: ReportItem }) {
           return `https://www.youtube.com/embed/${videoId}`;
         }
       }
-      if (urlObj.hostname.includes("reddit.com")) {
-        urlObj.hostname = "www.redditmedia.com";
-        urlObj.searchParams.set("embed", "true");
-        return urlObj.toString();
-      }
-      const blockedDomains = ["insideevs.com", "electrek.co", "cleantechnica.com", "electrive.com", "greencarreports.com"];
-      if (blockedDomains.some((d) => urlObj.hostname.includes(d))) {
-        return `https://corsproxy.io/?${encodeURIComponent(url)}`;
-      }
-      return url;
+      return `/api/source-preview?url=${encodeURIComponent(url)}`;
     } catch {
-      return url;
+      return `/api/source-preview?url=${encodeURIComponent(url)}`;
     }
   };
 
@@ -101,7 +167,25 @@ function ReportCard({ report }: { report: ReportItem }) {
           {new Date(report.report_date).toLocaleDateString(i18n.language === "en" ? "en-US" : "pt-PT")}
         </span>
       </div>
-      <p className="text-gray-200">{report.description}</p>
+      <div className="space-y-2.5 text-sm md:text-base leading-relaxed">
+        <p className="text-gray-100">
+          {renderHighlightedText(report.description || "")}
+        </p>
+        {(() => {
+          const extraContext = getExpandedContextText(
+            report,
+            i18n.language,
+            typeof report.estimated_range_km === "number" && report.estimated_range_km > 0
+              ? formatRangeKm(report.estimated_range_km)
+              : null
+          );
+          return extraContext ? (
+            <p className="text-xs md:text-sm text-gray-300 border-l-2 border-primary/40 pl-3 py-0.5">
+              {renderHighlightedText(extraContext)}
+            </p>
+          ) : null;
+        })()}
+      </div>
       
       {report.source_link && (
         <div className="mt-4 pt-3 border-t border-border/50 text-xs">

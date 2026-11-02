@@ -84,15 +84,28 @@ export default function Home() {
           const allAggregated = Array.from(aggregatedMap.values());
           setModelCount(allAggregated.length);
 
+          // Filter for vehicles that have a specific Brand + Model (avoid brand-only records)
+          const isValidModel = (m: string) => {
+            const clean = (m || "").trim().toLowerCase();
+            return (
+              clean.length >= 2 &&
+              !["general", "unknown", "multiple", "n/a", "none", "all", "ev", "evs", "unspecified"].includes(clean)
+            );
+          };
+
+          const specificVehicles = allAggregated.filter(
+            (v) => isValidModel(v.model) && v.model.toLowerCase() !== v.brand.toLowerCase()
+          );
+
           // Sort by count descending for SearchBar autocomplete and Top Vehicles section
-          const sortedByCount = [...allAggregated].sort(
+          const sortedByCount = [...specificVehicles].sort(
             (a, b) => b.count - a.count || a.brand.localeCompare(b.brand)
           );
           setVehicles(sortedByCount);
           setTopVehicles(sortedByCount.filter((v) => v.count > 0).slice(0, 16));
 
           // Sort by newest timestamp descending for Latest Brands & Models section
-          const sortedByLatest = [...allAggregated].sort((a, b) =>
+          const sortedByLatest = [...specificVehicles].sort((a, b) =>
             (b.createdAt || "").localeCompare(a.createdAt || "")
           );
           setLatestVehicles(sortedByLatest.slice(0, 16));
