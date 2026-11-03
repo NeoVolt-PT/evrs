@@ -5,12 +5,106 @@ import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import { useUnit } from "@/components/Providers";
 
+function FlagIcon({ code }: { code: string }) {
+  if (code === "pt") {
+    // Half Portugal (left/top-left) + Half Brazil (right/bottom-right)
+    return (
+      <svg viewBox="0 0 24 16" className="w-5 h-3.5 rounded-[2px] shadow-sm shrink-0 overflow-hidden">
+        <defs>
+          <clipPath id="ptHalf">
+            <polygon points="0,0 24,0 0,16" />
+          </clipPath>
+          <clipPath id="brHalf">
+            <polygon points="24,0 24,16 0,16" />
+          </clipPath>
+        </defs>
+        {/* Portugal Half */}
+        <g clipPath="url(#ptHalf)">
+          <rect x="0" y="0" width="9.5" height="16" fill="#006600" />
+          <rect x="9.5" y="0" width="14.5" height="16" fill="#ff0000" />
+          <circle cx="9.5" cy="8" r="3" fill="#ffcc00" />
+        </g>
+        {/* Brazil Half */}
+        <g clipPath="url(#brHalf)">
+          <rect x="0" y="0" width="24" height="16" fill="#009c3b" />
+          <polygon points="12,2.2 21.5,8 12,13.8 2.5,8" fill="#ffdf00" />
+          <circle cx="12" cy="8" r="3.2" fill="#002776" />
+        </g>
+        <line x1="0" y1="16" x2="24" y2="0" stroke="#ffffff" strokeWidth="0.8" strokeOpacity="0.7" />
+      </svg>
+    );
+  }
+
+  if (code === "en") {
+    // Half USA (top-left) + Half UK (bottom-right)
+    return (
+      <svg viewBox="0 0 24 16" className="w-5 h-3.5 rounded-[2px] shadow-sm shrink-0 overflow-hidden">
+        <defs>
+          <clipPath id="usHalf">
+            <polygon points="0,0 24,0 0,16" />
+          </clipPath>
+          <clipPath id="ukHalf">
+            <polygon points="24,0 24,16 0,16" />
+          </clipPath>
+        </defs>
+        {/* USA Half */}
+        <g clipPath="url(#usHalf)">
+          <rect width="24" height="16" fill="#b22234" />
+          <rect y="2.4" width="24" height="1.8" fill="#ffffff" />
+          <rect y="6" width="24" height="1.8" fill="#ffffff" />
+          <rect y="9.6" width="24" height="1.8" fill="#ffffff" />
+          <rect y="13.2" width="24" height="1.8" fill="#ffffff" />
+          <rect width="11" height="8.5" fill="#3c3b6e" />
+        </g>
+        {/* UK Half */}
+        <g clipPath="url(#ukHalf)">
+          <rect width="24" height="16" fill="#012169" />
+          <path d="M0,0 L24,16 M24,0 L0,16" stroke="#ffffff" strokeWidth="3" />
+          <path d="M0,0 L24,16 M24,0 L0,16" stroke="#c8102e" strokeWidth="1.5" />
+          <path d="M12,0 V16 M0,8 H24" stroke="#ffffff" strokeWidth="4.5" />
+          <path d="M12,0 V16 M0,8 H24" stroke="#c8102e" strokeWidth="2.5" />
+        </g>
+        <line x1="0" y1="16" x2="24" y2="0" stroke="#ffffff" strokeWidth="0.8" strokeOpacity="0.7" />
+      </svg>
+    );
+  }
+
+  if (code === "fr") {
+    return (
+      <svg viewBox="0 0 24 16" className="w-5 h-3.5 rounded-[2px] shadow-sm shrink-0 overflow-hidden">
+        <rect x="0" y="0" width="8" height="16" fill="#002395" />
+        <rect x="8" y="0" width="8" height="16" fill="#ffffff" />
+        <rect x="16" y="0" width="8" height="16" fill="#ed2939" />
+      </svg>
+    );
+  }
+
+  if (code === "es") {
+    return (
+      <svg viewBox="0 0 24 16" className="w-5 h-3.5 rounded-[2px] shadow-sm shrink-0 overflow-hidden">
+        <rect x="0" y="0" width="24" height="4" fill="#aa151b" />
+        <rect x="0" y="4" width="24" height="8" fill="#f1bf00" />
+        <rect x="0" y="12" width="24" height="4" fill="#aa151b" />
+      </svg>
+    );
+  }
+
+  // DE
+  return (
+    <svg viewBox="0 0 24 16" className="w-5 h-3.5 rounded-[2px] shadow-sm shrink-0 overflow-hidden">
+      <rect x="0" y="0" width="24" height="5.33" fill="#000000" />
+      <rect x="0" y="5.33" width="24" height="5.33" fill="#dd0000" />
+      <rect x="0" y="10.66" width="24" height="5.34" fill="#ffce00" />
+    </svg>
+  );
+}
+
 const LANGUAGES = [
-  { code: "pt", label: "PT", name: "Português", flag: "🇵🇹" },
-  { code: "en", label: "EN", name: "English", flag: "🇬🇧" },
-  { code: "fr", label: "FR", name: "Français", flag: "🇫🇷" },
-  { code: "es", label: "ES", name: "Español", flag: "🇪🇸" },
-  { code: "de", label: "DE", name: "Deutsch", flag: "🇩🇪" },
+  { code: "pt", label: "PT", name: "Português" },
+  { code: "en", label: "EN", name: "English" },
+  { code: "fr", label: "FR", name: "Français" },
+  { code: "es", label: "ES", name: "Español" },
+  { code: "de", label: "DE", name: "Deutsch" },
 ];
 
 export default function Header() {
@@ -81,7 +175,7 @@ export default function Header() {
               onClick={() => setOpen((prev) => !prev)}
               className="flex items-center gap-1.5 px-3 py-1 rounded bg-background border border-border hover:border-primary/60 transition font-semibold text-xs sm:text-sm cursor-pointer"
             >
-              <span>{currentLang.flag}</span>
+              <FlagIcon code={currentLang.code} />
               <span>{currentLang.label}</span>
               <svg
                 className={`w-3.5 h-3.5 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
@@ -94,7 +188,7 @@ export default function Header() {
             </button>
 
             {open && (
-              <div className="absolute right-0 mt-1.5 w-36 rounded-xl bg-card border border-border shadow-xl overflow-hidden py-1 z-50">
+              <div className="absolute right-0 mt-1.5 w-40 rounded-xl bg-card border border-border shadow-xl overflow-hidden py-1 z-50">
                 {LANGUAGES.map((l) => {
                   const isActive = l.code === currentLang.code;
                   return (
@@ -109,7 +203,7 @@ export default function Header() {
                       }`}
                     >
                       <span className="flex items-center gap-2">
-                        <span className="text-base leading-none">{l.flag}</span>
+                        <FlagIcon code={l.code} />
                         <span>{l.label}</span>
                       </span>
                       <span className="text-[11px] text-gray-400">{l.name}</span>

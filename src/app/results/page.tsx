@@ -7,13 +7,16 @@ import { useTranslation } from "react-i18next";
 import { useUnit } from "@/components/Providers";
 import RaceGauge from "@/components/RaceGauge";
 import IncentivesGauge, { CountryMeasureStat } from "@/components/IncentivesGauge";
+import CountryInvestmentChart from "@/components/CountryInvestmentChart";
 import MonetizationCards from "@/components/MonetizationCards";
 import {
   CURATED_INCENTIVES,
   detectCountryFromReport,
   isIncentiveText,
+  isMeasureActive,
   localizeCountryName,
 } from "@/lib/defaultIncentives";
+import { convertUnitsInText } from "@/lib/unitConverter";
 import { trackEvent } from "@/lib/analytics";
 import Link from "next/link";
 
@@ -36,6 +39,8 @@ interface ReportItem {
   model_pt?: string;
   model_en?: string;
   country?: string;
+  isActive?: boolean;
+  validPeriod?: string;
 }
 
 const EV_KEYWORD_REGEX =
@@ -153,6 +158,52 @@ function getExpandedContextText(
   return `Additional telemetry context for ${vehicleName}: This report highlights positive owner satisfaction, driving dynamics, electrical **efficiency**, and **software** integration, contributing favorably to the vehicle's overall **reliability** score in the EVRS Index.`;
 }
 
+const STATUS_LABELS: Record<
+  string,
+  {
+    active: string;
+    expired: string;
+    showHistory: string;
+    hideHistory: string;
+    historySectionTitle: string;
+  }
+> = {
+  pt: {
+    active: "Em Vigor",
+    expired: "Histórico / Expirado",
+    showHistory: "Mostrar Histórico de Medidas Expiradas",
+    hideHistory: "Ocultar Histórico de Medidas Expiradas",
+    historySectionTitle: "Arquivo Histórico (Medidas Expiradas — Desativadas da Pesquisa Ativa)",
+  },
+  en: {
+    active: "Active / In Force",
+    expired: "Historical / Expired",
+    showHistory: "Show History of Expired Measures",
+    hideHistory: "Hide History of Expired Measures",
+    historySectionTitle: "Historical Archive (Expired Measures — Excluded from Active Search)",
+  },
+  fr: {
+    active: "En Vigueur",
+    expired: "Historique / Expiré",
+    showHistory: "Afficher l'Historique des Mesures Expirées",
+    hideHistory: "Masquer l'Historique des Mesures Expirées",
+    historySectionTitle: "Archives Historiques (Mesures Expirées)",
+  },
+  es: {
+    active: "En Vigor",
+    expired: "Histórico / Caducado",
+    showHistory: "Mostrar Historial de Medidas Caducadas",
+    hideHistory: "Ocultar Historial de Medidas Caducadas",
+    historySectionTitle: "Archivo Histórico (Medidas Caducadas)",
+  },
+  de: {
+    active: "Aktiv / Gültig",
+    expired: "Historisch / Abgelaufen",
+    showHistory: "Verlauf abgelaufener Maßnahmen anzeigen",
+    hideHistory: "Verlauf abgelaufener Maßnahmen ausblenden",
+    historySectionTitle: "Historisches Archiv (Abgelaufene Maßnahmen)",
+  },
+};
 const DATE_LOCALES: Record<string, string> = {
   pt: "pt-PT",
   en: "en-US",
@@ -267,8 +318,19 @@ function ReportCard({ report }: { report: ReportItem }) {
     localizedModel !== "Unknown" &&
     localizedModel !== "Multiple";
 
+  const measureStillActive =
+    report.type === "Incentives"
+      ? isMeasureActive(report.description || "", report.isActive)
+      : true;
+  const statusLabels = STATUS_LABELS[lang] || STATUS_LABELS.pt;
+  const unitConvertedDescription = convertUnitsInText(displayedDescription, lang);
+
   return (
-    <div className="p-5 bg-card border border-border rounded-lg">
+    <div
+      className={`p-5 bg-card border rounded-lg ${
+        !measureStillActive ? "border-amber-700/40 opacity-85" : "border-border"
+      }`}
+    >
       <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${
@@ -283,6 +345,18 @@ function ReportCard({ report }: { report: ReportItem }) {
           {report.country && (
             <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-purple-950/50 text-purple-200 border border-purple-500/40">
               🌍 {localizeCountryName(report.country, lang)}
+            </span>
+          )}
+          {report.type === "Incentives" && (
+            <span
+              className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
+                measureStillActive
+                  ? "bg-emerald-950/50 text-emerald-300 border-emerald-500/40"
+                  : "bg-amber-950/50 text-amber-300 border-amber-500/40"
+              }`}
+            >
+              {measureStillActive ? `✅ ${statusLabels.active}` : `⏳ ${statusLabels.expired}`}
+              {report.validPeriod ? ` (${report.validPeriod})` : ""}
             </span>
           )}
           {(localizedBrand || showModelBadge) && (
@@ -307,7 +381,7 @@ function ReportCard({ report }: { report: ReportItem }) {
       </div>
       <div className="space-y-2.5 text-sm md:text-base leading-relaxed">
         <p className="text-gray-100">
-          {renderHighlightedText(displayedDescription)}
+          {renderHighlightedText(unitConvertedDescription)}
         </p>
         {(() => {
           const extraContext = getExpandedContextText(
@@ -387,6 +461,7 @@ function ResultsContent() {
   const [averageRangeKm, setAverageRangeKm] = useState<number | null>(null);
   const [selectedType, setSelectedType] = useState<string>("All");
   const [selectedCountry, setSelectedCountry] = useState<string>("All");
+  const [showHistory, setShowHistory] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [fallbackActive, setFallbackActive] = useState(false);
@@ -603,9 +678,17 @@ function ResultsContent() {
   const isIncentivesCategorySelected =
     isGlobalIncentivesMode || selectedType === "Incentives";
 
-  const incentiveReports = reports.filter((r) => r.type === "Incentives");
+  const allIncentiveReports = reports.filter((r) => r.type === "Incentives");
+  const activeIncentiveReports = allIncentiveReports.filter((r) =>
+    isMeasureActive(r.description || "", r.isActive)
+  );
+  const expiredIncentiveReports = allIncentiveReports.filter(
+    (r) => !isMeasureActive(r.description || "", r.isActive)
+  );
+
+  // Country stats are computed on ACTIVE (in-force) measures
   const countryMap = new Map<string, number>();
-  for (const r of incentiveReports) {
+  for (const r of activeIncentiveReports) {
     const c = r.country || "Global";
     countryMap.set(c, (countryMap.get(c) || 0) + 1);
   }
@@ -613,14 +696,28 @@ function ResultsContent() {
     .map(([country, count]) => ({ country, count }))
     .sort((a, b) => b.count - a.count || a.country.localeCompare(b.country));
 
+  // Exclude expired incentives from active search results by default
   const filteredReports = reports.filter((r) => {
     const matchesType = selectedType === "All" || r.type === selectedType;
     if (!matchesType) return false;
+    if (r.type === "Incentives" && !isMeasureActive(r.description || "", r.isActive)) {
+      return false;
+    }
     if (isIncentivesCategorySelected && selectedCountry !== "All") {
       return (r.country || "Global").toLowerCase() === selectedCountry.toLowerCase();
     }
     return true;
   });
+
+  const filteredExpiredReports = expiredIncentiveReports.filter((r) => {
+    if (selectedCountry !== "All") {
+      return (r.country || "Global").toLowerCase() === selectedCountry.toLowerCase();
+    }
+    return true;
+  });
+
+  const shortUiLang = (i18n.language || "pt").slice(0, 2).toLowerCase();
+  const statusUi = STATUS_LABELS[shortUiLang] || STATUS_LABELS.pt;
 
   return (
     <>
@@ -672,7 +769,7 @@ function ResultsContent() {
           {isIncentivesCategorySelected ? (
             <IncentivesGauge
               countryStats={countryStats}
-              totalMeasures={incentiveReports.length}
+              totalMeasures={activeIncentiveReports.length}
               selectedCountry={selectedCountry}
               onSelectCountry={(country) => setSelectedCountry(country)}
             />
@@ -737,7 +834,7 @@ function ResultsContent() {
                     : "bg-card text-gray-300 border-border hover:bg-border/50"
                 }`}
               >
-                {t("incentives_all_countries")} ({incentiveReports.length})
+                {t("incentives_all_countries")} ({activeIncentiveReports.length})
               </button>
               {countryStats.map((c) => (
                 <button
@@ -762,14 +859,64 @@ function ResultsContent() {
             </div>
           )}
 
-          <div className="flex justify-between text-sm text-gray-400 border-b border-border pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-400 border-b border-border pb-4">
             <span>{t("reports_found", { count: filteredReports.length })}</span>
-            <span>{t("sorted_by_date")}</span>
+            <div className="flex items-center gap-4">
+              {isIncentivesCategorySelected && filteredExpiredReports.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowHistory((prev) => !prev)}
+                  className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-950/40 text-amber-300 border border-amber-500/40 hover:bg-amber-900/40 transition cursor-pointer"
+                >
+                  📜 {showHistory ? statusUi.hideHistory : statusUi.showHistory} ({filteredExpiredReports.length})
+                </button>
+              )}
+              <span>{t("sorted_by_date")}</span>
+            </div>
           </div>
-          
-          {filteredReports.map((report) => (
-            <ReportCard key={report.id} report={report} />
-          ))}
+
+          {isIncentivesCategorySelected ? (
+            <div className="space-y-10">
+              {(selectedCountry === "All"
+                ? countryStats.map((c) => c.country)
+                : [selectedCountry]
+              ).map((countryName) => {
+                const countryMeasures = filteredReports.filter(
+                  (r) => (r.country || "Global").toLowerCase() === countryName.toLowerCase()
+                );
+                if (countryMeasures.length === 0) return null;
+                return (
+                  <div key={countryName} className="space-y-4">
+                    <h2 className="text-lg font-bold text-purple-300 border-b border-purple-500/30 pb-2 flex items-center justify-between">
+                      <span>🌍 {localizeCountryName(countryName, i18n.language)}</span>
+                      <span className="text-xs font-mono text-gray-400">
+                        {countryMeasures.length} ✅ {statusUi.active}
+                      </span>
+                    </h2>
+                    {countryMeasures.map((report) => (
+                      <ReportCard key={report.id} report={report} />
+                    ))}
+                    <CountryInvestmentChart country={countryName} />
+                  </div>
+                );
+              })}
+
+              {showHistory && filteredExpiredReports.length > 0 && (
+                <div className="pt-6 border-t border-amber-500/30 space-y-4">
+                  <h3 className="text-base font-bold text-amber-300 flex items-center gap-2">
+                    ⏳ {statusUi.historySectionTitle}
+                  </h3>
+                  {filteredExpiredReports.map((report) => (
+                    <ReportCard key={report.id} report={report} />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            filteredReports.map((report) => (
+              <ReportCard key={report.id} report={report} />
+            ))
+          )}
 
           <MonetizationCards brand={brand} model={!fallbackActive ? model : null} />
         </div>

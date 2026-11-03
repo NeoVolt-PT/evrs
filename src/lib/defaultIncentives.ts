@@ -15,6 +15,87 @@ export interface IncentiveMeasure {
   model_pt?: string;
   model_en?: string;
   country?: string;
+  isActive?: boolean;
+  validPeriod?: string;
+}
+
+export interface AnnualInvestmentPoint {
+  year: number;
+  budgetMillionsEur: number;
+  maxGrantEur: number;
+}
+
+export const COUNTRY_ANNUAL_INVESTMENT: Record<string, AnnualInvestmentPoint[]> = {
+  Portugal: [
+    { year: 2022, budgetMillionsEur: 10, maxGrantEur: 4000 },
+    { year: 2023, budgetMillionsEur: 14, maxGrantEur: 4000 },
+    { year: 2024, budgetMillionsEur: 16, maxGrantEur: 4000 },
+    { year: 2025, budgetMillionsEur: 20, maxGrantEur: 4000 },
+    { year: 2026, budgetMillionsEur: 24, maxGrantEur: 4500 },
+  ],
+  "United States": [
+    { year: 2022, budgetMillionsEur: 1800, maxGrantEur: 7000 },
+    { year: 2023, budgetMillionsEur: 4200, maxGrantEur: 7000 },
+    { year: 2024, budgetMillionsEur: 6800, maxGrantEur: 7000 },
+    { year: 2025, budgetMillionsEur: 7500, maxGrantEur: 7000 },
+    { year: 2026, budgetMillionsEur: 6100, maxGrantEur: 7000 },
+  ],
+  "European Union": [
+    { year: 2022, budgetMillionsEur: 1200, maxGrantEur: 5000 },
+    { year: 2023, budgetMillionsEur: 1650, maxGrantEur: 5000 },
+    { year: 2024, budgetMillionsEur: 2100, maxGrantEur: 4500 },
+    { year: 2025, budgetMillionsEur: 2600, maxGrantEur: 4500 },
+    { year: 2026, budgetMillionsEur: 3100, maxGrantEur: 4500 },
+  ],
+  France: [
+    { year: 2022, budgetMillionsEur: 1100, maxGrantEur: 6000 },
+    { year: 2023, budgetMillionsEur: 1300, maxGrantEur: 5000 },
+    { year: 2024, budgetMillionsEur: 1500, maxGrantEur: 4000 },
+    { year: 2025, budgetMillionsEur: 1000, maxGrantEur: 4000 },
+    { year: 2026, budgetMillionsEur: 950, maxGrantEur: 4000 },
+  ],
+  Spain: [
+    { year: 2022, budgetMillionsEur: 400, maxGrantEur: 7000 },
+    { year: 2023, budgetMillionsEur: 800, maxGrantEur: 7000 },
+    { year: 2024, budgetMillionsEur: 1200, maxGrantEur: 7000 },
+    { year: 2025, budgetMillionsEur: 1550, maxGrantEur: 7000 },
+    { year: 2026, budgetMillionsEur: 1700, maxGrantEur: 7000 },
+  ],
+  Germany: [
+    { year: 2022, budgetMillionsEur: 3400, maxGrantEur: 9000 },
+    { year: 2023, budgetMillionsEur: 2600, maxGrantEur: 6750 },
+    { year: 2024, budgetMillionsEur: 650, maxGrantEur: 3000 },
+    { year: 2025, budgetMillionsEur: 820, maxGrantEur: 3500 },
+    { year: 2026, budgetMillionsEur: 950, maxGrantEur: 3500 },
+  ],
+  "United Kingdom": [
+    { year: 2022, budgetMillionsEur: 580, maxGrantEur: 1750 },
+    { year: 2023, budgetMillionsEur: 490, maxGrantEur: 1200 },
+    { year: 2024, budgetMillionsEur: 620, maxGrantEur: 1500 },
+    { year: 2025, budgetMillionsEur: 780, maxGrantEur: 1800 },
+    { year: 2026, budgetMillionsEur: 910, maxGrantEur: 2000 },
+  ],
+  Norway: [
+    { year: 2022, budgetMillionsEur: 1900, maxGrantEur: 11000 },
+    { year: 2023, budgetMillionsEur: 1450, maxGrantEur: 9500 },
+    { year: 2024, budgetMillionsEur: 1350, maxGrantEur: 9000 },
+    { year: 2025, budgetMillionsEur: 1300, maxGrantEur: 9000 },
+    { year: 2026, budgetMillionsEur: 1250, maxGrantEur: 8800 },
+  ],
+  China: [
+    { year: 2022, budgetMillionsEur: 12500, maxGrantEur: 3800 },
+    { year: 2023, budgetMillionsEur: 14000, maxGrantEur: 4100 },
+    { year: 2024, budgetMillionsEur: 16200, maxGrantEur: 6500 },
+    { year: 2025, budgetMillionsEur: 18000, maxGrantEur: 6500 },
+    { year: 2026, budgetMillionsEur: 19500, maxGrantEur: 6500 },
+  ],
+};
+
+export function isMeasureActive(description: string, explicitIsActive?: boolean): boolean {
+  if (typeof explicitIsActive === "boolean") return explicitIsActive;
+  const expiredRegex =
+    /\b(expired|ended|terminated|canceled|cancelled|without tax credits|dropped|phased out|suspended|discontinued|expirado|terminou|suspenso|extinto)\b/i;
+  return !expiredRegex.test(description || "");
 }
 
 const COUNTRY_TRANSLATIONS: Record<string, Record<string, string>> = {
@@ -344,12 +425,75 @@ export const CURATED_INCENTIVES: IncentiveMeasure[] = [
     model_en: "NEV Purchase Tax Exemption & Trade-In",
     report_date: "2026-03-15",
     source_link: "https://www.gov.cn",
+    isActive: true,
+    validPeriod: "2024–2027",
     description:
       "China offers a nationwide **20,000 RMB (~$2,800) EV trade-in subsidy** for replacing older vehicles with New Energy Vehicles (**NEVs**), combined with a **purchase tax exemption** up to **30,000 RMB** per vehicle and free green **EV license plates** in major megacities.",
     description_en:
       "China offers a nationwide **20,000 RMB (~$2,800) EV trade-in subsidy** for replacing older vehicles with New Energy Vehicles (**NEVs**), combined with a **purchase tax exemption** up to **30,000 RMB** per vehicle and free green **EV license plates** in major megacities.",
     description_pt:
       "A China concede um **apoio** nacional de abate até **20.000 RMB (~$2.800)** na troca de veículos antigos por carros de nova energia (**NEVs**), acumulado com **isenção de imposto de compra** até **30.000 RMB** por veículo e atribuição gratuita de matrículas verdes sem sorteio nas grandes metrópoles.",
+  },
+  // Historical / Expired Measures (kept for history, excluded from active search by default)
+  {
+    id: "inc-hist-pt-2023",
+    vehicle_id: "inc-pt",
+    type: "Incentives",
+    country: "Portugal",
+    vehicle_brand: "Portugal",
+    vehicle_model: "Fundo Ambiental 2021–2023 (Sem Abate)",
+    model_pt: "Fundo Ambiental 2021–2023 (Apoio sem exigência de abate)",
+    model_en: "Environmental Fund 2021–2023 (Grant without scrappage)",
+    report_date: "2023-12-31",
+    source_link: "https://www.fundoambiental.pt",
+    isActive: false,
+    validPeriod: "2021–2023",
+    description:
+      "Historical measure (Expired at end of 2023): Portugal's previous **Fundo Ambiental** rules granted **€4,000** directly for buying a new 100% electric car without requiring the scrappage of an older combustion car. Replaced by the current scrappage-linked program.",
+    description_en:
+      "Historical measure (Expired at end of 2023): Portugal's previous **Fundo Ambiental** rules granted **€4,000** directly for buying a new 100% electric car without requiring the scrappage of an older combustion car. Replaced by the current scrappage-linked program.",
+    description_pt:
+      "Medida histórica (Terminou no final de 2023): O regulamento anterior do **Fundo Ambiental** em Portugal atribuía **€4.000** na compra de um ligeiro **100% elétrico** novo sem exigir o abate de uma viatura antiga a combustão, tendo sido substituído pelo regime atual com abate obrigatório.",
+  },
+  {
+    id: "inc-hist-de-bafa",
+    vehicle_id: "inc-de",
+    type: "Incentives",
+    country: "Germany",
+    vehicle_brand: "Germany",
+    vehicle_model: "Umweltbonus / BAFA Prémio Federal",
+    model_pt: "Umweltbonus / Bónus Federal BAFA (Expirado)",
+    model_en: "Umweltbonus / BAFA Federal EV Grant (Expired)",
+    report_date: "2023-12-18",
+    source_link: "https://www.bafa.de",
+    isActive: false,
+    validPeriod: "2016–2023",
+    description:
+      "Historical measure (Ended December 2023): Germany's federal **Umweltbonus (BAFA)** provided up to **€6,750** (and up to **€9,000** in 2022) in direct purchase **subsidies** for battery electric cars, funding over 2.1 million EVs before budget termination.",
+    description_en:
+      "Historical measure (Ended December 2023): Germany's federal **Umweltbonus (BAFA)** provided up to **€6,750** (and up to **€9,000** in 2022) in direct purchase **subsidies** for battery electric cars, funding over 2.1 million EVs before budget termination.",
+    description_pt:
+      "Medida histórica (Terminou em Dezembro de 2023): O programa federal alemão **Umweltbonus (BAFA)** concedeu apoios diretos até **€6.750** (e até **€9.000** em 2022) na compra de elétricos a **bateria**, financiando mais de 2,1 milhões de veículos antes do encerramento orçamental.",
+  },
+  {
+    id: "inc-hist-uk-picg",
+    vehicle_id: "inc-uk",
+    type: "Incentives",
+    country: "United Kingdom",
+    vehicle_brand: "United Kingdom",
+    vehicle_model: "Plug-in Car Grant (PiCG)",
+    model_pt: "Plug-in Car Grant — Subsídio Direto UK (Expirado)",
+    model_en: "UK Plug-in Car Grant (PiCG - Expired)",
+    report_date: "2022-06-14",
+    source_link: "https://www.gov.uk/plug-in-vehicle-grants",
+    isActive: false,
+    validPeriod: "2011–2022",
+    description:
+      "Historical measure (Ended June 2022): The UK's **Plug-in Car Grant (PiCG)** offered direct purchase **discounts** from **£1,500 to £5,000** for new passenger EVs before shifting public funding toward **OZEV** charging infrastructure and BiK salary sacrifice incentives.",
+    description_en:
+      "Historical measure (Ended June 2022): The UK's **Plug-in Car Grant (PiCG)** offered direct purchase **discounts** from **£1,500 to £5,000** for new passenger EVs before shifting public funding toward **OZEV** charging infrastructure and BiK salary sacrifice incentives.",
+    description_pt:
+      "Medida histórica (Terminou em Junho de 2022): O programa britânico **Plug-in Car Grant (PiCG)** atribuiu **descontos** diretos entre **£1.500 e £5.000** na compra de ligeiros elétricos novos antes da transição dos fundos públicos para a rede de **carregamento** OZEV e benefícios fiscais BiK.",
   },
 ];
 
