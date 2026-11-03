@@ -5,7 +5,11 @@ import SearchBar, { VehicleOption } from "@/components/SearchBar";
 import MonetizationCards from "@/components/MonetizationCards";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
-import { isValidCarBrandAndModel } from "@/lib/validBrands";
+import {
+  getCanonicalVehicleKey,
+  isValidCarBrandAndModel,
+  normalizeVehicleIdentity,
+} from "@/lib/validBrands";
 import { trackEvent } from "@/lib/analytics";
 import Link from "next/link";
 
@@ -64,16 +68,17 @@ export default function Home() {
           for (const v of modelsData as { id: string; brand: string; model: string; created_at?: string }[]) {
             if (!isValidCarBrandAndModel(v.brand, v.model)) continue;
 
-            validBrandsSet.add(v.brand);
-            const key = `${v.brand.toLowerCase()}|${v.model.toLowerCase()}`;
+            const canonical = normalizeVehicleIdentity(v.brand, v.model);
+            validBrandsSet.add(canonical.brand);
+            const key = getCanonicalVehicleKey(canonical.brand, canonical.model);
             const vCount = countByVehicleId.get(v.id) || 0;
             const vLatest = latestReportByVehicleId.get(v.id) || v.created_at || "";
 
             const existing = aggregatedMap.get(key);
             if (!existing) {
               aggregatedMap.set(key, {
-                brand: v.brand,
-                model: v.model,
+                brand: canonical.brand,
+                model: canonical.model,
                 count: vCount,
                 createdAt: vLatest,
               });

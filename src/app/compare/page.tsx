@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
-import { isValidCarBrandAndModel } from "@/lib/validBrands";
+import {
+  getCanonicalVehicleKey,
+  isValidCarBrandAndModel,
+  normalizeVehicleIdentity,
+} from "@/lib/validBrands";
 import RaceGauge, { GaugeReportItem } from "@/components/RaceGauge";
 import MonetizationCards from "@/components/MonetizationCards";
 
@@ -87,10 +91,16 @@ export default function ComparePage() {
       const map = new Map<string, VehicleEntry>();
       for (const v of data as { id: string; brand: string; model: string }[]) {
         if (!isValidCarBrandAndModel(v.brand, v.model)) continue;
-        const key = `${v.brand}|${v.model}`;
+        const canonical = normalizeVehicleIdentity(v.brand, v.model);
+        const key = getCanonicalVehicleKey(canonical.brand, canonical.model);
         const existing = map.get(key);
         if (!existing) {
-          map.set(key, { key, brand: v.brand, model: v.model, ids: [v.id] });
+          map.set(key, {
+            key,
+            brand: canonical.brand,
+            model: canonical.model,
+            ids: [v.id],
+          });
         } else {
           existing.ids.push(v.id);
         }

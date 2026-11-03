@@ -16,6 +16,9 @@ import {
   isMeasureActive,
   localizeCountryName,
 } from "@/lib/defaultIncentives";
+import {
+  normalizeVehicleIdentity,
+} from "@/lib/validBrands";
 import { convertUnitsInText } from "@/lib/unitConverter";
 import { trackEvent } from "@/lib/analytics";
 import Link from "next/link";
@@ -524,44 +527,62 @@ function ResultsContent() {
           return;
         }
 
-        let query = supabase.from("vehicles").select("id, brand, model").ilike("brand", brand);
+        const targetCanonical = normalizeVehicleIdentity(brand, model || "");
+        const targetBrandAlnum = targetCanonical.brand.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const targetModelAlnum = (targetCanonical.model || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
-        if (model && model.trim() !== "") {
-          query = query.ilike("model", `%${model}%`);
-        }
-
-        const { data: vehicleData, error: vehicleError } = await query;
+        // Fetch all vehicles matching the brand (case-insensitive) and unify model variations
+        // like ("Nissan", "Leaf") + ("Nissan", "LEAF") or ("Volkswagen", "ID.4") + ("Volkswagen", "id4")
+        const { data: allBrandVehicles, error: vehicleError } = await supabase
+          .from("vehicles")
+          .select("id, brand, model")
+          .ilike("brand", `%${brand.trim()}%`);
 
         if (vehicleError) throw vehicleError;
 
+        const sameBrandList = (allBrandVehicles || []).filter((v) => {
+          const vNorm = normalizeVehicleIdentity(v.brand, v.model);
+          return vNorm.brand.toLowerCase().replace(/[^a-z0-9]/g, "") === targetBrandAlnum;
+        });
+
         let matchedVehicles: { id: string; brand: string; model: string }[] = [];
 
-        if (!vehicleData || vehicleData.length === 0) {
-          if (model && model.trim() !== "") {
-            const { data: fallbackData, error: fallbackError } = await supabase
-              .from("vehicles")
-              .select("id, brand, model")
-              .ilike("brand", brand);
+        if (model && model.trim() !== "") {
+          matchedVehicles = sameBrandList.filter((v) => {
+            const vNorm = normalizeVehicleIdentity(v.brand, v.model);
+            const vModelAlnum = vNorm.model.toLowerCase().replace(/[^a-z0-9]/g, "");
+            return (
+              vModelAlnum === targetModelAlnum ||
+              vModelAlnum.includes(targetModelAlnum) ||
+              targetModelAlnum.includes(vModelAlnum)
+            );
+          });
 
-            if (fallbackError) throw fallbackError;
-
-            if (fallbackData && fallbackData.length > 0) {
+          if (matchedVehicles.length === 0) {
+            if (sameBrandList.length > 0) {
               setFallbackActive(true);
-              matchedVehicles = fallbackData;
+              matchedVehicles = sameBrandList;
             } else {
               setReports([]);
               return;
             }
+          }
+        } else {
+          if (sameBrandList.length > 0) {
+            matchedVehicles = sameBrandList;
           } else {
             setReports([]);
             return;
           }
-        } else {
-          matchedVehicles = vehicleData;
         }
 
         const vehicleIds = matchedVehicles.map((v) => v.id);
-        const vehicleMap = new Map(matchedVehicles.map((v) => [v.id, v]));
+        const vehicleMap = new Map(
+          matchedVehicles.map((v) => {
+            const norm = normalizeVehicleIdentity(v.brand, v.model);
+            return [v.id, { id: v.id, brand: norm.brand, model: norm.model }];
+          })
+        );
 
         const { data: reportsData, error: reportsError } = await supabase
           .from("reports")

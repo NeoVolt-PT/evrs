@@ -14,6 +14,9 @@ from agents_config import (
     EXPANDED_NHTSA_MODELS,
     build_google_news_rss_url,
     should_analyze_article,
+    canonicalize_model_name,
+    get_alnum_vehicle_key,
+    deduplicate_database_vehicles,
 )
 
 # Load environment variables
@@ -328,16 +331,20 @@ INVALID_MODELS = {
 
 
 def normalize_brand_and_model(brand: str, model: str):
-    """Normalizes brand aliases and enforces a specific model name (rejects brand-only records)."""
-    clean_brand = (brand or "").strip()
-    clean_model = (model or "").strip()
+    """Normalizes brand aliases, canonicalizes model casing/punctuation, and rejects brand-only records."""
+    clean_brand = re.sub(r"\s+", " ", (brand or "").strip())
+    clean_model = re.sub(r"\s+", " ", (model or "").strip())
 
     lower_brand = clean_brand.lower()
     if lower_brand in BRAND_ALIASES:
         clean_brand = BRAND_ALIASES[lower_brand]
+    elif len(clean_brand) > 3 and (clean_brand.isupper() or clean_brand.islower()):
+        clean_brand = clean_brand[0].upper() + clean_brand[1:].lower()
 
     if clean_brand and clean_model.lower().startswith(clean_brand.lower() + " "):
         clean_model = clean_model[len(clean_brand):].strip()
+
+    clean_model = canonicalize_model_name(clean_model)
 
     if (
         clean_model.lower() in INVALID_MODELS
@@ -552,14 +559,32 @@ def save_to_supabase(data, link):
         if isinstance(raw_range, (int, float)) and 50 <= float(raw_range) <= 1500:
             estimated_range_km = round(float(raw_range), 2)
 
-        # 1. Upsert Vehicle
-        vehicle_res = supabase.table('vehicles').upsert(
-            {"brand": brand, "model": model},
-            on_conflict="brand,model"
-        ).execute()
+        # 1. Check if a vehicle with the same case/punctuation-insensitive key already exists in DB
+        vehicle_id = None
+        target_key = get_alnum_vehicle_key(brand, model)
+        try:
+            existing_vehicles = (
+                supabase.table('vehicles')
+                .select('id, brand, model')
+                .ilike('brand', brand)
+                .execute()
+            )
+            for ev in (existing_vehicles.data or []):
+                if get_alnum_vehicle_key(ev.get('brand', ''), ev.get('model', '')) == target_key:
+                    vehicle_id = ev['id']
+                    break
+        except Exception:
+            pass
 
-        if vehicle_res.data:
-            vehicle_id = vehicle_res.data[0]['id']
+        if not vehicle_id:
+            vehicle_res = supabase.table('vehicles').upsert(
+                {"brand": brand, "model": model},
+                on_conflict="brand,model"
+            ).execute()
+            if vehicle_res.data:
+                vehicle_id = vehicle_res.data[0]['id']
+
+        if vehicle_id:
 
             report_payload = {
                 "vehicle_id": vehicle_id,
@@ -635,6 +660,8 @@ def send_summary_email(new_count, total_count):
 
 def main():
     print("Starting EVRS Scraper Agent...")
+    if supabase:
+        deduplicate_database_vehicles(supabase, normalize_brand_and_model)
     articles = fetch_rss_data()
     print(f"Found {len(articles)} articles.")
     new_registries = 0

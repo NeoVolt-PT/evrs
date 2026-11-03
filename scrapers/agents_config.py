@@ -1,3 +1,4 @@
+import re
 import urllib.parse
 
 # 1. Agente 3: Exército de Sub-Agentes de Incentivos & Leis Governamentais por País (Google News RSS Nativo)
@@ -171,3 +172,188 @@ def should_analyze_article(title: str, summary: str) -> bool:
     if any(kw in combined for kw in EXCLUDED_NON_CAR_KEYWORDS):
         return False
     return True
+
+
+CANONICAL_MODELS_MAP = {
+    "leaf": "Leaf",
+    "ariya": "Ariya",
+    "ioniq 5": "Ioniq 5",
+    "ioniq5": "Ioniq 5",
+    "ioniq 5 n": "Ioniq 5 N",
+    "ioniq5n": "Ioniq 5 N",
+    "ioniq 6": "Ioniq 6",
+    "ioniq6": "Ioniq 6",
+    "ioniq 6 n": "Ioniq 6 N",
+    "ioniq6n": "Ioniq 6 N",
+    "ioniq 9": "Ioniq 9",
+    "ioniq9": "Ioniq 9",
+    "ioniq 3": "Ioniq 3",
+    "ioniq3": "Ioniq 3",
+    "id.3": "ID.3",
+    "id3": "ID.3",
+    "id 3": "ID.3",
+    "id.4": "ID.4",
+    "id4": "ID.4",
+    "id 4": "ID.4",
+    "id.5": "ID.5",
+    "id5": "ID.5",
+    "id.6": "ID.6",
+    "id6": "ID.6",
+    "id.7": "ID.7",
+    "id7": "ID.7",
+    "id 7": "ID.7",
+    "id.buzz": "ID. Buzz",
+    "id. buzz": "ID. Buzz",
+    "id buzz": "ID. Buzz",
+    "idbuzz": "ID. Buzz",
+    "id.polo": "ID. Polo",
+    "id polo": "ID. Polo",
+    "id. polo": "ID. Polo",
+    "id.cross": "ID. Cross",
+    "id cross": "ID. Cross",
+    "id. cross": "ID. Cross",
+    "mach-e": "Mustang Mach-E",
+    "mach e": "Mustang Mach-E",
+    "mache": "Mustang Mach-E",
+    "mustang mach-e": "Mustang Mach-E",
+    "mustang mach e": "Mustang Mach-E",
+    "f150 lightning": "F-150 Lightning",
+    "f-150 lightning": "F-150 Lightning",
+    "bz4x": "bZ4X",
+    "bz": "bZ4X",
+    "ix": "iX",
+    "ix1": "iX1",
+    "ix2": "iX2",
+    "ix3": "iX3",
+    "ix5": "iX5",
+    "ix7": "iX7",
+    "i3": "i3",
+    "i4": "i4",
+    "i5": "i5",
+    "i7": "i7",
+    "7x": "7X",
+    "7gt": "7GT",
+    "7 gt": "7GT",
+    "ex2": "EX2",
+    "ex30": "EX30",
+    "ex40": "EX40",
+    "ex60": "EX60",
+    "ex90": "EX90",
+    "ev3": "EV3",
+    "ev4": "EV4",
+    "ev5": "EV5",
+    "ev6": "EV6",
+    "ev9": "EV9",
+    "model 3": "Model 3",
+    "model3": "Model 3",
+    "model y": "Model Y",
+    "modely": "Model Y",
+    "model s": "Model S",
+    "models": "Model S",
+    "model x": "Model X",
+    "modelx": "Model X",
+    "escalade iq": "Escalade IQ",
+    "escaladeiq": "Escalade IQ",
+    "es 350e": "ES 350e",
+    "es350e": "ES 350e",
+}
+
+
+def canonicalize_model_name(model_str: str) -> str:
+    clean = re.sub(r"\s+", " ", (model_str or "").strip())
+    if not clean:
+        return ""
+    lower = clean.lower()
+    compact = re.sub(r"[\s._-]+", "", lower)
+
+    if lower in CANONICAL_MODELS_MAP:
+        return CANONICAL_MODELS_MAP[lower]
+    if compact in CANONICAL_MODELS_MAP:
+        return CANONICAL_MODELS_MAP[compact]
+
+    clean = re.sub(r"\be-tron\b", "e-tron", clean, flags=re.IGNORECASE)
+    words = []
+    for w in clean.split(" "):
+        if re.match(r"^[A-Za-z]{4,}$", w) and (w.isupper() or w.islower()):
+            words.append(w[0].upper() + w[1:].lower())
+        else:
+            words.append(w)
+    return " ".join(words)
+
+
+def get_alnum_vehicle_key(brand: str, model: str) -> str:
+    b_key = re.sub(r"[^a-z0-9]", "", (brand or "").lower())
+    m_key = re.sub(r"[^a-z0-9]", "", (model or "").lower())
+    return f"{b_key}|{m_key}"
+
+
+def deduplicate_database_vehicles(supabase, normalize_fn):
+    """
+    Scans the Supabase 'vehicles' table, detects duplicate vehicles with different
+    capitalization/punctuation (e.g. 'Nissan Leaf' vs 'Nissan LEAF', 'Hyundai Ioniq 5' vs 'Hyundai IONIQ 5'),
+    moves all reports to the canonical vehicle record, deletes duplicate vehicle rows,
+    and normalizes the canonical brand & model names in place.
+    """
+    if not supabase:
+        return
+
+    print("Running database vehicle deduplication & canonicalization check...")
+    try:
+        res = supabase.table("vehicles").select("id, brand, model, created_at").order("created_at", desc=False).execute()
+        rows = res.data or []
+        if not rows:
+            return
+
+        groups = {}
+        for v in rows:
+            raw_b = v.get("brand") or ""
+            raw_m = v.get("model") or ""
+            if raw_b.lower() == "incentives":
+                norm_b, norm_m = "Incentives", raw_m.strip()
+            else:
+                norm_b, norm_m = normalize_fn(raw_b, raw_m)
+                if not norm_m:
+                    norm_m = raw_m.strip()
+            key = get_alnum_vehicle_key(norm_b, norm_m)
+            groups.setdefault(key, []).append((v, norm_b, norm_m))
+
+        merged_count = 0
+        renamed_count = 0
+
+        for key, items in groups.items():
+            primary_item = items[0]
+            for candidate in items:
+                v_row, nb, nm = candidate
+                if v_row["brand"] == nb and v_row["model"] == nm:
+                    primary_item = candidate
+                    break
+
+            primary_row, canon_brand, canon_model = primary_item
+            primary_id = primary_row["id"]
+
+            for v_row, _, _ in items:
+                dup_id = v_row["id"]
+                if dup_id == primary_id:
+                    continue
+                try:
+                    supabase.table("reports").update({"vehicle_id": primary_id}).eq("vehicle_id", dup_id).execute()
+                    supabase.table("stats").delete().eq("vehicle_id", dup_id).execute()
+                    supabase.table("vehicles").delete().eq("id", dup_id).execute()
+                    merged_count += 1
+                    print(f" -> Merged duplicate vehicle '{v_row['brand']} {v_row['model']}' into '{canon_brand} {canon_model}'")
+                except Exception as merge_err:
+                    print(f"Warning merging {dup_id}: {merge_err}")
+
+            if canon_brand and canon_model and (primary_row["brand"] != canon_brand or primary_row["model"] != canon_model):
+                try:
+                    supabase.table("vehicles").update({"brand": canon_brand, "model": canon_model}).eq("id", primary_id).execute()
+                    renamed_count += 1
+                    print(f" -> Canonicalized '{primary_row['brand']} {primary_row['model']}' -> '{canon_brand} {canon_model}'")
+                except Exception as ren_err:
+                    print(f"Warning canonicalizing {primary_id}: {ren_err}")
+
+        print(f"Deduplication complete: {merged_count} duplicate vehicles merged, {renamed_count} vehicle names canonicalized.")
+    except Exception as e:
+        print(f"Warning during vehicle deduplication: {e}")
+
+

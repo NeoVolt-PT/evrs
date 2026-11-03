@@ -1,6 +1,10 @@
 import type { MetadataRoute } from "next";
 import { supabase } from "@/lib/supabase";
-import { isValidCarBrandAndModel } from "@/lib/validBrands";
+import {
+  getCanonicalVehicleKey,
+  isValidCarBrandAndModel,
+  normalizeVehicleIdentity,
+} from "@/lib/validBrands";
 
 export const revalidate = 3600; // Refresh sitemap every hour
 
@@ -52,12 +56,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const seenModels = new Set<string>();
 
       for (const v of vehicles) {
-        const brand = (v.brand || "").trim();
-        const model = (v.model || "").trim();
-        if (!isValidCarBrandAndModel(brand, model)) continue;
+        if (!isValidCarBrandAndModel(v.brand, v.model)) continue;
+        const { brand, model } = normalizeVehicleIdentity(v.brand, v.model);
 
-        if (!seenBrands.has(brand.toLowerCase())) {
-          seenBrands.add(brand.toLowerCase());
+        const brandKey = brand.toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (!seenBrands.has(brandKey)) {
+          seenBrands.add(brandKey);
           const brandParams = new URLSearchParams({ brand });
           entries.push({
             url: `${baseUrl}/results?${brandParams.toString()}`,
@@ -67,7 +71,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           });
         }
 
-        const modelKey = `${brand.toLowerCase()}|${model.toLowerCase()}`;
+        const modelKey = getCanonicalVehicleKey(brand, model);
         if (!seenModels.has(modelKey)) {
           seenModels.add(modelKey);
           const modelParams = new URLSearchParams({ brand, model });
