@@ -305,15 +305,33 @@ def deduplicate_database_vehicles(supabase, normalize_fn):
             return
 
         groups = {}
+        invalid_deleted = 0
         for v in rows:
-            raw_b = v.get("brand") or ""
-            raw_m = v.get("model") or ""
+            raw_b = (v.get("brand") or "").strip()
+            raw_m = (v.get("model") or "").strip()
             if raw_b.lower() == "incentives":
-                norm_b, norm_m = "Incentives", raw_m.strip()
+                norm_b, norm_m = "Incentives", raw_m
             else:
+                # Delete legacy invalid rows (e.g. 'Unknown', 'General', or comma-separated multi-brands)
+                if (
+                    raw_m.lower() in {"unknown", "general", "multiple", "n/a", "none", ""}
+                    or "," in raw_b
+                    or "," in raw_m
+                ):
+                    try:
+                        supabase.table("vehicles").delete().eq("id", v["id"]).execute()
+                        invalid_deleted += 1
+                    except Exception:
+                        pass
+                    continue
                 norm_b, norm_m = normalize_fn(raw_b, raw_m)
                 if not norm_m:
-                    norm_m = raw_m.strip()
+                    try:
+                        supabase.table("vehicles").delete().eq("id", v["id"]).execute()
+                        invalid_deleted += 1
+                    except Exception:
+                        pass
+                    continue
             key = get_alnum_vehicle_key(norm_b, norm_m)
             groups.setdefault(key, []).append((v, norm_b, norm_m))
 

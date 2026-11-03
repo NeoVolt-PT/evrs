@@ -368,6 +368,7 @@ export function isValidCarBrandAndModel(brand?: string | null, model?: string | 
   if (NON_CAR_BRANDS.has(lowerB)) return false;
   if (INVALID_MODEL_NAMES.has(lowerM)) return false;
   if (lowerB === lowerM) return false;
+  if (b.includes(",") || m.includes(",") || b.includes("/") || b.split(" ").length > 3) return false;
 
   if (NON_CAR_MODEL_KEYWORDS.some((kw) => lowerM.includes(kw) || lowerB.includes(kw))) {
     return false;
