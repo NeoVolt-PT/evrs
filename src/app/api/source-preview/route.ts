@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit, getClientIp, isSafePublicUrl } from "@/lib/rateLimit";
 
 function extractMeta(html: string, property: string): string {
   const regex1 = new RegExp(
@@ -49,22 +50,19 @@ function extractParagraphs(html: string): string[] {
 }
 
 export async function GET(request: Request) {
+  const ip = getClientIp(request);
+  if (!checkRateLimit(ip, "source-preview", 40, 60_000)) {
+    return new NextResponse("Too many requests", { status: 429 });
+  }
+
   const { searchParams } = new URL(request.url);
   const targetUrl = searchParams.get("url");
 
-  if (!targetUrl) {
-    return new NextResponse("Missing URL parameter", { status: 400 });
+  if (!targetUrl || !isSafePublicUrl(targetUrl)) {
+    return new NextResponse("Invalid or blocked URL", { status: 400 });
   }
 
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(targetUrl);
-    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-      return new NextResponse("Invalid protocol", { status: 400 });
-    }
-  } catch {
-    return new NextResponse("Invalid URL", { status: 400 });
-  }
+  const parsedUrl = new URL(targetUrl);
 
   try {
     if (parsedUrl.hostname.includes("reddit.com")) {

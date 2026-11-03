@@ -1,0 +1,140 @@
+const NON_CAR_BRANDS = new Set([
+  "aaa",
+  "abb",
+  "also",
+  "amble",
+  "american e.v.",
+  "amflow",
+  "ampstar",
+  "aniioki",
+  "anker",
+  "anker solix",
+  "anyland",
+  "apple",
+  "archer aviation",
+  "ariel rider",
+  "astraux",
+  "ather",
+  "aventon",
+  "bluetti",
+  "bosch",
+  "catl",
+  "chargepoint",
+  "ecoflow",
+  "ego",
+  "ego commercial",
+  "electrify america",
+  "eli",
+  "elysian",
+  "energica",
+  "enviolo",
+  "fortescue",
+  "garmin",
+  "gogoro",
+  "harley-davidson",
+  "heybike",
+  "ionity",
+  "jackery",
+  "jasion",
+  "joby",
+  "kenda",
+  "kuka",
+  "lectric",
+  "livewire",
+  "niu",
+  "nvidia",
+  "ola",
+  "ola electric",
+  "panasonic",
+  "priority",
+  "rad power",
+  "range energy",
+  "redwood",
+  "rio tinto",
+  "segway",
+  "sonnen",
+  "specialized",
+  "stark",
+  "super73",
+  "surron",
+  "sykeruns",
+  "talaria",
+  "trek",
+  "tritium",
+  "uber",
+  "uscale",
+  "velotric",
+  "wallbox",
+  "waymo",
+  "xcmg",
+  "yadea",
+  "yozma",
+  "zero",
+  "zero motorcycles",
+  "incentives",
+  "unknown",
+  "general",
+  "multiple",
+]);
+
+const NON_CAR_MODEL_KEYWORDS = [
+  "e-bike",
+  "ebike",
+  "bike",
+  "scooter",
+  "motorcycle",
+  "moto",
+  "mower",
+  "solix",
+  "power station",
+  "charger",
+  "supercharger",
+  "aircraft",
+  "airliner",
+  "drone",
+  "boat",
+  "trailer",
+  "bus",
+  "semi",
+  "reefer",
+  "tractor",
+  "forklift",
+];
+
+const INVALID_MODEL_NAMES = new Set([
+  "general",
+  "unknown",
+  "multiple",
+  "n/a",
+  "none",
+  "all",
+  "ev",
+  "evs",
+  "electric",
+  "unspecified",
+  "various",
+  "lineup",
+  "models",
+  "car",
+  "cars",
+  "",
+]);
+
+export function isValidCarBrandAndModel(brand?: string | null, model?: string | null): boolean {
+  const b = (brand || "").trim();
+  const m = (model || "").trim();
+  if (b.length < 2 || m.length < 2) return false;
+
+  const lowerB = b.toLowerCase();
+  const lowerM = m.toLowerCase();
+
+  if (NON_CAR_BRANDS.has(lowerB)) return false;
+  if (INVALID_MODEL_NAMES.has(lowerM)) return false;
+  if (lowerB === lowerM) return false;
+
+  if (NON_CAR_MODEL_KEYWORDS.some((kw) => lowerM.includes(kw) || lowerB.includes(kw))) {
+    return false;
+  }
+
+  return true;
+}

@@ -11,10 +11,15 @@ export default function ContactPage() {
   const [email, setEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+  const [honeypot, setHoneypot] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (honeypot) {
+      setStatus("success");
+      return;
+    }
     if (!name.trim() || !email.trim() || !message.trim()) return;
 
     setStatus("sending");
@@ -25,7 +30,7 @@ export default function ContactPage() {
         fetch("/api/contact", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, subject, message }),
+          body: JSON.stringify({ name, email, subject, message, website_url: honeypot }),
         }),
         fetch("https://formsubmit.co/ajax/filmfer@gmail.com", {
           method: "POST",
@@ -76,6 +81,17 @@ export default function ContactPage() {
         <p className="text-sm text-gray-400 mb-6">{t("contact_subtitle")}</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Anti-spam Honeypot field (hidden from real users) */}
+          <input
+            type="text"
+            name="website_url"
+            tabIndex={-1}
+            autoComplete="off"
+            value={honeypot}
+            onChange={(e) => setHoneypot(e.target.value)}
+            className="hidden"
+            aria-hidden="true"
+          />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-300 mb-1">

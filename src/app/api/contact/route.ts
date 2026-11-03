@@ -1,13 +1,28 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { checkRateLimit, escapeHtml, getClientIp } from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    if (!checkRateLimit(ip, "contact-form", 4, 600_000)) {
+      return NextResponse.json(
+        { ok: false, error: "Too many messages. Please wait a few minutes." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
-    const name = (body?.name || "").trim();
-    const email = (body?.email || "").trim();
-    const subject = (body?.subject || "Contacto via EVRS (neovolt.app)").trim();
-    const message = (body?.message || "").trim();
+
+    // Honeypot anti-bot field: if filled by a spam bot, silently succeed without sending email
+    if (body?.website_url && String(body.website_url).trim() !== "") {
+      return NextResponse.json({ ok: true });
+    }
+
+    const name = (body?.name || "").trim().slice(0, 120);
+    const email = (body?.email || "").trim().slice(0, 160);
+    const subject = (body?.subject || "Contacto via EVRS (neovolt.app)").trim().slice(0, 200);
+    const message = (body?.message || "").trim().slice(0, 4000);
 
     if (!name || !email || !message) {
       return NextResponse.json(
@@ -19,12 +34,12 @@ export async function POST(request: Request) {
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
         <h2 style="color: #10b981;">📩 Nova Mensagem de Contacto — EVRS (neovolt.app)</h2>
-        <p><strong>Nome:</strong> ${name.replace(/</g, "&lt;")}</p>
-        <p><strong>Email:</strong> ${email.replace(/</g, "&lt;")}</p>
-        <p><strong>Assunto:</strong> ${subject.replace(/</g, "&lt;")}</p>
+        <p><strong>Nome:</strong> ${escapeHtml(name)}</p>
+        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+        <p><strong>Assunto:</strong> ${escapeHtml(subject)}</p>
         <hr style="border-top: 1px solid #e2e8f0;" />
         <h3 style="color: #1e293b;">Mensagem:</h3>
-        <pre style="background: #f8fafc; padding: 12px; border-radius: 6px; white-space: pre-wrap; font-family: inherit;">${message.replace(/</g, "&lt;")}</pre>
+        <pre style="background: #f8fafc; padding: 12px; border-radius: 6px; white-space: pre-wrap; font-family: inherit;">${escapeHtml(message)}</pre>
       </div>
     `;
 

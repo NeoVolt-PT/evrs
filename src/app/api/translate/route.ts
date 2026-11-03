@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 const memoryCache = new Map<string, string>();
-
 const SUPPORTED_LANGS = new Set(["pt", "en", "fr", "es", "de"]);
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    if (!checkRateLimit(ip, "translate", 80, 60_000)) {
+      return NextResponse.json({ translatedText: "" }, { status: 429 });
+    }
+
     const body = await request.json();
-    const text = (body?.text || "").trim();
+    const text = (body?.text || "").trim().slice(0, 2500);
     const rawLang = (body?.targetLang || "pt").toLowerCase().slice(0, 2);
     const targetLang = SUPPORTED_LANGS.has(rawLang) ? rawLang : "en";
 

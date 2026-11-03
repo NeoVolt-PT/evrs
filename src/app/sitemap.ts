@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { supabase } from "@/lib/supabase";
+import { isValidCarBrandAndModel } from "@/lib/validBrands";
 
 export const revalidate = 3600; // Refresh sitemap every hour
 
@@ -13,6 +14,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: "daily",
       priority: 1.0,
+    },
+    {
+      url: `${baseUrl}/compare`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/results?brand=Incentives`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.9,
     },
     {
       url: `${baseUrl}/about`,
@@ -41,7 +54,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       for (const v of vehicles) {
         const brand = (v.brand || "").trim();
         const model = (v.model || "").trim();
-        if (!brand) continue;
+        if (!isValidCarBrandAndModel(brand, model)) continue;
 
         if (!seenBrands.has(brand.toLowerCase())) {
           seenBrands.add(brand.toLowerCase());
@@ -54,23 +67,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           });
         }
 
-        if (
-          model &&
-          model !== "General" &&
-          model !== "Unknown" &&
-          model !== "Multiple"
-        ) {
-          const modelKey = `${brand.toLowerCase()}|${model.toLowerCase()}`;
-          if (!seenModels.has(modelKey)) {
-            seenModels.add(modelKey);
-            const modelParams = new URLSearchParams({ brand, model });
-            entries.push({
-              url: `${baseUrl}/results?${modelParams.toString()}`,
-              lastModified: now,
-              changeFrequency: "weekly",
-              priority: 0.8,
-            });
-          }
+        const modelKey = `${brand.toLowerCase()}|${model.toLowerCase()}`;
+        if (!seenModels.has(modelKey)) {
+          seenModels.add(modelKey);
+          const modelParams = new URLSearchParams({ brand, model });
+          entries.push({
+            url: `${baseUrl}/results?${modelParams.toString()}`,
+            lastModified: now,
+            changeFrequency: "weekly",
+            priority: 0.8,
+          });
         }
       }
     }
@@ -80,3 +86,4 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return entries;
 }
+

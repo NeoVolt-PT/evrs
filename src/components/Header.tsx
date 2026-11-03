@@ -141,6 +141,12 @@ export default function Header() {
 
         <div className="flex items-center gap-3 sm:gap-4 text-sm">
           <Link
+            href="/compare"
+            className="px-2.5 py-1 rounded-full bg-emerald-900/30 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-900/50 transition text-xs font-semibold hidden md:inline-block"
+          >
+            ⚔️ VS
+          </Link>
+          <Link
             href="/results?brand=Incentives"
             className="px-2.5 py-1 rounded-full bg-purple-900/30 text-purple-300 border border-purple-500/40 hover:bg-purple-900/50 transition text-xs font-semibold"
           >

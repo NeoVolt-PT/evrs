@@ -5,6 +5,7 @@ import SearchBar, { VehicleOption } from "@/components/SearchBar";
 import MonetizationCards from "@/components/MonetizationCards";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
+import { isValidCarBrandAndModel } from "@/lib/validBrands";
 import { trackEvent } from "@/lib/analytics";
 import Link from "next/link";
 
@@ -32,8 +33,9 @@ export default function Home() {
             .order("created_at", { ascending: false }),
           supabase
             .from("reports")
-            .select("vehicle_id, created_at")
-            .order("created_at", { ascending: false }),
+            .select("vehicle_id, created_at", { count: "exact" })
+            .order("created_at", { ascending: false })
+            .limit(5000),
         ]);
 
         if (vehiclesRes.error) throw vehiclesRes.error;
@@ -42,7 +44,7 @@ export default function Home() {
         const reportsData = reportsRes.data || [];
 
         if (!reportsRes.error) {
-          setReportCount(reportsData.length);
+          setReportCount(reportsRes.count ?? reportsData.length);
         }
 
         // Count reports per vehicle_id and track latest report timestamp
@@ -56,11 +58,13 @@ export default function Home() {
         }
 
         if (modelsData.length > 0) {
-          const uniqueBrands = new Set(modelsData.map((v: { brand: string }) => v.brand));
-          setBrandCount(uniqueBrands.size);
-
           const aggregatedMap = new Map<string, RankedVehicle>();
+          const validBrandsSet = new Set<string>();
+
           for (const v of modelsData as { id: string; brand: string; model: string; created_at?: string }[]) {
+            if (!isValidCarBrandAndModel(v.brand, v.model)) continue;
+
+            validBrandsSet.add(v.brand);
             const key = `${v.brand.toLowerCase()}|${v.model.toLowerCase()}`;
             const vCount = countByVehicleId.get(v.id) || 0;
             const vLatest = latestReportByVehicleId.get(v.id) || v.created_at || "";
@@ -81,21 +85,9 @@ export default function Home() {
             }
           }
 
-          const allAggregated = Array.from(aggregatedMap.values());
-          setModelCount(allAggregated.length);
-
-          // Filter for vehicles that have a specific Brand + Model (avoid brand-only records)
-          const isValidModel = (m: string) => {
-            const clean = (m || "").trim().toLowerCase();
-            return (
-              clean.length >= 2 &&
-              !["general", "unknown", "multiple", "n/a", "none", "all", "ev", "evs", "unspecified"].includes(clean)
-            );
-          };
-
-          const specificVehicles = allAggregated.filter(
-            (v) => isValidModel(v.model) && v.model.toLowerCase() !== v.brand.toLowerCase()
-          );
+          const specificVehicles = Array.from(aggregatedMap.values());
+          setBrandCount(validBrandsSet.size);
+          setModelCount(specificVehicles.length);
 
           // Sort by count descending for SearchBar autocomplete and Top Vehicles section
           const sortedByCount = [...specificVehicles].sort(

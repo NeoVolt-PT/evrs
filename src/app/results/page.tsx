@@ -462,11 +462,21 @@ function ResultsContent() {
   const [selectedType, setSelectedType] = useState<string>("All");
   const [selectedCountry, setSelectedCountry] = useState<string>("All");
   const [showHistory, setShowHistory] = useState<boolean>(false);
+  const [keywordFilter, setKeywordFilter] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [fallbackActive, setFallbackActive] = useState(false);
 
   const isGlobalIncentivesMode = (brand || "").toLowerCase() === "incentives";
+
+  useEffect(() => {
+    const vehicleTitle = isGlobalIncentivesMode
+      ? t("incentives_page_title")
+      : [brand, model].filter(Boolean).join(" ");
+    if (vehicleTitle && typeof document !== "undefined") {
+      document.title = `${vehicleTitle} | EVRS by NeoVolt-PT`;
+    }
+  }, [brand, model, isGlobalIncentivesMode, t]);
 
   useEffect(() => {
     async function fetchReports() {
@@ -706,6 +716,11 @@ function ResultsContent() {
     if (isIncentivesCategorySelected && selectedCountry !== "All") {
       return (r.country || "Global").toLowerCase() === selectedCountry.toLowerCase();
     }
+    if (keywordFilter.trim() !== "") {
+      const kw = keywordFilter.trim().toLowerCase();
+      const textBlob = `${r.description || ""} ${r.description_pt || ""} ${r.vehicle_brand || ""} ${r.vehicle_model || ""} ${r.country || ""}`.toLowerCase();
+      if (!textBlob.includes(kw)) return false;
+    }
     return true;
   });
 
@@ -859,9 +874,16 @@ function ResultsContent() {
             </div>
           )}
 
-          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-400 border-b border-border pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-400 border-b border-border pb-4">
             <span>{t("reports_found", { count: filteredReports.length })}</span>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="text"
+                value={keywordFilter}
+                onChange={(e) => setKeywordFilter(e.target.value)}
+                placeholder="🔍 Filtrar..."
+                className="px-3 py-1 rounded-lg bg-card border border-border text-xs text-white placeholder-gray-500 focus:border-primary outline-none w-40 sm:w-52"
+              />
               {isIncentivesCategorySelected && filteredExpiredReports.length > 0 && (
                 <button
                   type="button"
