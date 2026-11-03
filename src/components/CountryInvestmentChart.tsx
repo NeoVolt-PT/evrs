@@ -24,7 +24,7 @@ const LABELS: Record<
     budgetLabel: "Orçamento / Investimento Anual",
     grantLabel: "Apoio Máx. / Veículo",
     millionsUnit: "M€",
-    perVehicle: "/ EV",
+    perVehicle: "/ VE",
   },
   en: {
     title: "Public EV Investment & Annual Support by Year",
