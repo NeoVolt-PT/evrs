@@ -8,11 +8,19 @@ from datetime import datetime
 from groq import Groq
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from agents_config import (
+    COUNTRY_POLICY_AGENTS,
+    MODEL_REVIEW_SEARCH_QUERIES,
+    EXPANDED_NHTSA_MODELS,
+    build_google_news_rss_url,
+    should_analyze_article,
+)
 
 # Load environment variables
 load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
@@ -63,32 +71,21 @@ RSS_FEEDS = [
     "https://www.youtube.com/feeds/videos.xml?channel_id=UCzz4CoEgSgWNs9ZAvRMhW2A",  # Fully Charged Show
 ]
 
-NHTSA_EV_MODELS = [
-    ("TESLA", "MODEL 3", 2024),
-    ("TESLA", "MODEL Y", 2024),
-    ("HYUNDAI", "IONIQ 5", 2024),
-    ("FORD", "MUSTANG MACH-E", 2024),
-    ("RIVIAN", "R1T", 2024),
-    ("VOLKSWAGEN", "ID.4", 2024),
-    ("KIA", "EV6", 2024),
-    ("CHEVROLET", "BOLT EV", 2023),
-]
-
 
 def fetch_nhtsa_complaints():
-    """Fetches public-domain owner complaints from the official US NHTSA API (100% legal & free)."""
+    """Agent 2: Fetches public-domain owner complaints from the official US NHTSA API (24 EV models)."""
     complaints = []
-    for make, model, year in NHTSA_EV_MODELS:
+    for make, model, year in EXPANDED_NHTSA_MODELS:
         url = (
             f"https://api.nhtsa.gov/complaints/complaintsByVehicle"
             f"?make={requests.utils.quote(make)}&model={requests.utils.quote(model)}&modelYear={year}"
         )
         try:
-            print(f"Fetching NHTSA Public API: {make} {model} ({year})")
+            print(f"[Agent 2 - NHTSA] Fetching: {make} {model} ({year})")
             resp = requests.get(url, timeout=10)
             if resp.status_code == 200:
                 payload = resp.json()
-                for item in (payload.get("results") or [])[:5]:
+                for item in (payload.get("results") or [])[:4]:
                     odi_id = item.get("odiNumber")
                     summary = item.get("summary", "")
                     components = item.get("components", "UNKNOWN")
@@ -98,19 +95,53 @@ def fetch_nhtsa_complaints():
                             "summary": summary[:800],
                             "link": f"https://www.nhtsa.gov/vehicle/{year}/{make}/{model}#odi-{odi_id}",
                             "published": datetime.now().isoformat(),
+                            "agent_role": "reliability",
                         })
         except Exception as e:
             print(f"Warning fetching NHTSA for {make} {model}: {e}")
     return complaints
 
 
+def fetch_country_policy_agents_data():
+    """Agent 3: Runs the 12 Country Policy Sub-Agents via localized Google News RSS."""
+    policy_articles = []
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) EVRS_Bot/1.0"}
+
+    for sub_agent in COUNTRY_POLICY_AGENTS:
+        country = sub_agent["country"]
+        rss_url = build_google_news_rss_url(
+            sub_agent["query"],
+            hl=sub_agent["hl"],
+            gl=sub_agent["gl"],
+            ceid=sub_agent["ceid"],
+        )
+        print(f"[Agent 3 - Policy Sub-Agent: {country}] Fetching localized laws & incentives...")
+        try:
+            feed = feedparser.parse(rss_url, request_headers=headers)
+            for entry in feed.entries[:6]:
+                summary = getattr(entry, "summary", "") or getattr(entry, "description", "")
+                policy_articles.append({
+                    "title": entry.title,
+                    "summary": summary[:1000],
+                    "link": entry.link,
+                    "published": getattr(entry, "published", datetime.now().isoformat()),
+                    "agent_role": "policy",
+                    "hint_country": country,
+                })
+        except Exception as e:
+            print(f"Warning in Policy Sub-Agent for {country}: {e}")
+
+    return policy_articles
+
+
 def fetch_rss_data():
-    """Fetches and parses RSS feeds (Reddit, EV News, YouTube XML) plus NHTSA public API."""
+    """Orchestrator: Collects data across Agent 1 (Reviews/Range), Agent 2 (Reliability/NHTSA), and Agent 3 (Country Policies)."""
     articles = []
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) EVRS_Bot/1.0"}
-    
+
+    # Agent 1A: Community, EV Portals & YouTube Channels
     for url in RSS_FEEDS:
-        print(f"Fetching RSS: {url}")
+        print(f"[Agent 1 - Reviews/Community] Fetching RSS: {url}")
         try:
             feed = feedparser.parse(url, request_headers=headers)
             for entry in feed.entries:
@@ -119,12 +150,36 @@ def fetch_rss_data():
                     "title": entry.title,
                     "summary": summary[:1000],
                     "link": entry.link,
-                    "published": getattr(entry, "published", datetime.now().isoformat())
+                    "published": getattr(entry, "published", datetime.now().isoformat()),
+                    "agent_role": "review",
                 })
         except Exception as e:
             print(f"Warning parsing RSS {url}: {e}")
 
+    # Agent 1B: Specific EV Model Range & Review Search Feeds
+    for q in MODEL_REVIEW_SEARCH_QUERIES:
+        search_url = build_google_news_rss_url(q)
+        print(f"[Agent 1 - Model Reviews Search] Fetching: {q[:55]}...")
+        try:
+            feed = feedparser.parse(search_url, request_headers=headers)
+            for entry in feed.entries[:10]:
+                summary = getattr(entry, "summary", "") or getattr(entry, "description", "")
+                articles.append({
+                    "title": entry.title,
+                    "summary": summary[:1000],
+                    "link": entry.link,
+                    "published": getattr(entry, "published", datetime.now().isoformat()),
+                    "agent_role": "review",
+                })
+        except Exception as e:
+            print(f"Warning in Model Review Search: {e}")
+
+    # Agent 2: Official NHTSA Complaints API
     articles.extend(fetch_nhtsa_complaints())
+
+    # Agent 3: Country Policy & Incentives Sub-Agents Army
+    articles.extend(fetch_country_policy_agents_data())
+
     return articles
 
 BRAND_ALIASES = {
@@ -294,35 +349,84 @@ def normalize_brand_and_model(brand: str, model: str):
     return clean_brand, clean_model
 
 
-def analyze_with_ai(text: str):
+def analyze_with_free_fallback(prompt: str):
     """
-    Uses Groq LLM to categorize, translate, and extract structured EV data.
-    Automatically falls back across available Groq models if a model is deprecated/unavailable.
+    Zero-cost external fallback if all Groq models hit rate limits:
+    1. Google Gemini Flash Free Tier (if GEMINI_API_KEY is set)
+    2. Pollinations Free OpenAI-compatible endpoint (no API key required, 100% free)
+    """
+    if GEMINI_API_KEY:
+        try:
+            gem_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+            gem_resp = requests.post(
+                gem_url,
+                json={
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"responseMimeType": "application/json", "temperature": 0.1},
+                },
+                timeout=20,
+            )
+            if gem_resp.status_code == 200:
+                gem_data = gem_resp.json()
+                raw_text = gem_data["candidates"][0]["content"]["parts"][0]["text"]
+                return parse_json_response(raw_text)
+        except Exception as e:
+            print(f"Gemini fallback warning: {e}")
+
+    try:
+        print("Using free Pollinations AI fallback...")
+        pol_resp = requests.post(
+            "https://text.pollinations.ai/openai",
+            headers={"Content-Type": "application/json"},
+            json={
+                "model": "openai",
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.1,
+            },
+            timeout=25,
+        )
+        if pol_resp.status_code == 200:
+            pol_data = pol_resp.json()
+            content = pol_data["choices"][0]["message"]["content"]
+            return parse_json_response(content)
+    except Exception as e:
+        print(f"Free fallback warning: {e}")
+
+    return None
+
+
+def analyze_with_ai(text: str, hint_country: str = None):
+    """
+    Uses Groq LLM (with queue rotation on 429 rate-limits + free external fallback)
+    to categorize, translate, and extract structured EV or Policy data.
     """
     global CANDIDATE_MODELS
-    if not groq_client:
-        print("Groq API key missing. Skipping AI analysis.")
-        return None
-
     if not CANDIDATE_MODELS:
         init_groq_models()
 
+    country_instruction = (
+        f"NOTE: This article was collected by the {hint_country} Policy Sub-Agent. If it discusses EV subsidies, tax exemptions, grants, rebates, tariffs, or charging laws, set 'type' to 'Incentives' and 'country' to '{hint_country}'."
+        if hint_country
+        else ""
+    )
+
     prompt = f"""
     Analyze the following text about Electric Vehicles.
+    {country_instruction}
     We accept TWO kinds of EV reports:
     1. Vehicle-specific reports: MUST refer to a SPECIFIC Electric Vehicle Brand AND a SPECIFIC Model (e.g., Tesla Model 3, Hyundai Ioniq 5, Kia EV6, Volkswagen ID.4, BYD Seal, Volvo EX30, etc.).
-    2. Policy, Discounts & Electrification Incentives ('Incentives'): Government subsidies, tax credits, EV purchase rebates, import tariffs, charging infrastructure laws, or manufacturer EV discounts applied in a specific Country/Region (e.g., Portugal, United States, European Union, Germany, France, Spain, United Kingdom, China, Norway, Canada, Brazil).
+    2. Policy, Discounts & Electrification Incentives ('Incentives'): Government subsidies, tax credits, EV purchase rebates, import tariffs, charging infrastructure laws, or manufacturer EV discounts applied in a specific Country/Region (e.g., Portugal, United States, European Union, Germany, France, Spain, United Kingdom, China, Norway, Canada, Brazil, Australia).
 
     If the text is neither a specific EV model report nor an EV policy/incentive/discount measure, return {{"error": "Not relevant"}}.
 
     Extract the following information in strict JSON format:
     {{
         "brand": "Exact Brand Name (e.g., Tesla, Hyundai, BYD) OR 'Incentives' if it is a general government/country policy or EV incentive.",
-        "model": "Exact Specific Model Name (e.g., Model 3, Ioniq 5, ID.4). If type is 'Incentives' and no single car model is specified, put the Country Name here (e.g., 'Portugal', 'United States', 'European Union', 'Germany', 'United Kingdom', 'China', 'France', 'Spain').",
-        "country": "Country or Region where the policy/incentive/discount applies (e.g., 'Portugal', 'United States', 'European Union', 'Germany', 'France', 'Spain', 'United Kingdom', 'China', 'Norway', 'Global').",
+        "model": "Exact Specific Model Name (e.g., Model 3, Ioniq 5, ID.4). If type is 'Incentives' and no single car model is specified, put the short Program/Law Name or Country Name here (e.g., 'Fundo Ambiental', 'Plan MOVES', 'Bonus Écologique', 'Portugal', 'United States').",
+        "country": "Country or Region where the policy/incentive/discount applies (e.g., 'Portugal', 'Brazil', 'United States', 'European Union', 'Germany', 'France', 'Spain', 'United Kingdom', 'China', 'Norway', 'Canada', 'Australia', 'Global').",
         "type": "Must be exactly one of: 'Real Range', 'Mechanical', 'Battery', 'Positives', or 'Incentives'. Use 'Incentives' for any financial aid, tax credit, discount, or political electrification measure.",
-        "description": "Write a clear, comprehensive, well-structured technical summary in International English with 4 to 6 complete sentences (minimum 60 words). Explain the exact context, financial amounts, discounts, policy rules, or real-world range/battery/mechanical details, and key takeaways. Wrap the 4 to 8 most important keywords, amounts, or findings in double asterisks like **€4,000 subsidy**, **$7,500 tax credit**, **450 km real range**, **LFP battery**, or **tax exemption** so they can be highlighted in the UI.",
-        "language_original": "e.g., 'EN', 'PT', 'FR'",
+        "description": "Write a clear, comprehensive, well-structured technical summary in International English with 4 to 6 complete sentences (minimum 60 words). If an incentive has expired or ended, explicitly mention 'Expired' in the description. Wrap the 4 to 8 most important keywords, amounts, or findings in double asterisks like **€4,000 subsidy**, **$7,500 tax credit**, **450 km real range**, **LFP battery**, or **tax exemption** so they can be highlighted in the UI.",
+        "language_original": "e.g., 'EN', 'PT', 'FR', 'ES', 'DE'",
         "contradictory_info": true or false (boolean),
         "estimated_range_km": number or null (if a specific real-world range distance is mentioned in the text, convert it to kilometers as a number between 50 and 1500; otherwise null)
     }}
@@ -331,55 +435,58 @@ def analyze_with_ai(text: str):
     Text: {text}
     """
 
-    for model_name in list(CANDIDATE_MODELS):
-        try:
+    if groq_client:
+        for model_name in list(CANDIDATE_MODELS):
             try:
-                response = groq_client.chat.completions.create(
-                    messages=[{"role": "user", "content": prompt}],
-                    model=model_name,
-                    response_format={"type": "json_object"},
-                    temperature=0.1,
-                )
-            except Exception as format_err:
-                err_str = str(format_err).lower()
-                if "response_format" in err_str or "json_object" in err_str:
+                try:
                     response = groq_client.chat.completions.create(
                         messages=[{"role": "user", "content": prompt}],
                         model=model_name,
+                        response_format={"type": "json_object"},
                         temperature=0.1,
                     )
-                else:
-                    raise format_err
+                except Exception as format_err:
+                    err_str = str(format_err).lower()
+                    if "response_format" in err_str or "json_object" in err_str:
+                        response = groq_client.chat.completions.create(
+                            messages=[{"role": "user", "content": prompt}],
+                            model=model_name,
+                            temperature=0.1,
+                        )
+                    else:
+                        raise format_err
 
-            content = response.choices[0].message.content
-            return parse_json_response(content)
+                content = response.choices[0].message.content
+                return parse_json_response(content)
 
-        except Exception as e:
-            err_msg = str(e)
-            err_lower = err_msg.lower()
+            except Exception as e:
+                err_msg = str(e)
+                err_lower = err_msg.lower()
 
-            if (
-                "model_not_found" in err_lower
-                or "model_decommissioned" in err_lower
-                or "does not exist" in err_lower
-                or "do not have access" in err_lower
-                or "404" in err_lower
-            ):
-                print(f"Model '{model_name}' unavailable ({err_msg}). Switching to next available model...")
-                if model_name in CANDIDATE_MODELS and len(CANDIDATE_MODELS) > 1:
-                    CANDIDATE_MODELS.remove(model_name)
+                if (
+                    "model_not_found" in err_lower
+                    or "model_decommissioned" in err_lower
+                    or "does not exist" in err_lower
+                    or "do not have access" in err_lower
+                    or "404" in err_lower
+                ):
+                    print(f"Model '{model_name}' unavailable. Removing from pool...")
+                    if model_name in CANDIDATE_MODELS and len(CANDIDATE_MODELS) > 1:
+                        CANDIDATE_MODELS.remove(model_name)
+                    continue
+
+                if "429" in err_lower or "rate_limit" in err_lower or "rate limit" in err_lower:
+                    print(f"Rate limit hit on '{model_name}', rotating model to back of queue...")
+                    if model_name in CANDIDATE_MODELS and len(CANDIDATE_MODELS) > 1:
+                        CANDIDATE_MODELS.remove(model_name)
+                        CANDIDATE_MODELS.append(model_name)
+                    time.sleep(1.5)
+                    continue
+
+                print(f"Error on Groq model '{model_name}': {e}")
                 continue
 
-            if "429" in err_lower or "rate_limit" in err_lower or "rate limit" in err_lower:
-                print(f"Rate limit hit on '{model_name}', waiting 2s and trying next model...")
-                time.sleep(2)
-                continue
-
-            print(f"Error during AI analysis with model '{model_name}': {e}")
-            return None
-
-    print("Error during AI analysis: No accessible Groq chat models succeeded.")
-    return None
+    return analyze_with_free_fallback(prompt)
 
 def update_vehicle_stats(vehicle_id: str, new_range_km=None):
     """Updates the stats table (total_reports, average_range_km, average_range_miles) for a vehicle."""
@@ -549,10 +656,16 @@ def main():
             except Exception as e:
                 pass
                 
+        # Zero-token pre-filter to skip non-car articles (e-bikes, scooters, mowers, power stations)
+        if not should_analyze_article(article.get('title', ''), article.get('summary', '')):
+            print(f"[{idx+1}/{len(articles)}] Pre-filtered (Non-car/irrelevant): {article['title'][:50]}...")
+            continue
+
         text_to_analyze = f"{article['title']} - {article['summary']}"
+        hint_country = article.get("hint_country")
         print(f"[{idx+1}/{len(articles)}] Analyzing: {article['title'][:50]}...")
-        
-        extracted_data = analyze_with_ai(text_to_analyze)
+
+        extracted_data = analyze_with_ai(text_to_analyze, hint_country=hint_country)
         
         if extracted_data and 'error' not in extracted_data:
             if 'brand' in extracted_data and 'model' in extracted_data:
