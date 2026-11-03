@@ -299,7 +299,7 @@ def deduplicate_database_vehicles(supabase, normalize_fn):
 
     print("Running database vehicle deduplication & canonicalization check...")
     try:
-        res = supabase.table("vehicles").select("id, brand, model, created_at").order("created_at", desc=False).execute()
+        res = supabase.table("vehicles").select("id, brand, model, created_at").order("created_at", desc=False).range(0, 5000).execute()
         rows = res.data or []
         if not rows:
             return
