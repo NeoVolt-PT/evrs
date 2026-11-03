@@ -12,15 +12,20 @@ import {
   CURATED_INCENTIVES,
   detectCountryFromReport,
   isIncentiveText,
+  localizeCountryName,
 } from "@/lib/defaultIncentives";
 import { trackEvent } from "@/lib/analytics";
 import Link from "next/link";
+
+const clientTranslationCache = new Map<string, string>();
 
 interface ReportItem {
   id: string;
   vehicle_id: string;
   type: string;
   description: string;
+  description_pt?: string;
+  description_en?: string;
   source_link?: string | null;
   report_date: string;
   language_original?: string;
@@ -28,6 +33,8 @@ interface ReportItem {
   estimated_range_km?: number | null;
   vehicle_brand?: string;
   vehicle_model?: string;
+  model_pt?: string;
+  model_en?: string;
   country?: string;
 }
 
@@ -102,7 +109,10 @@ function getExpandedContextText(
   }
 
   if (report.type === "Incentives") {
-    const countryLabel = report.country || report.vehicle_brand || "Global";
+    const countryLabel = localizeCountryName(
+      report.country || report.vehicle_brand || "Global",
+      lang
+    );
     return isPt
       ? `Enquadramento em ${countryLabel}: Esta medida integra o pacote de **incentivos**, **descontos** diretos ou benefícios fiscais (**ISV**, **IUC**, **IVA** ou **Fundo Ambiental**) aplicáveis à aquisição de veículos elétricos e instalação de postos de **carregamento**.`
       : `Policy context in ${countryLabel}: This measure is part of the national **incentives**, purchase **rebates**, **tax credit** exemptions, or **charging** infrastructure grants aimed at accelerating electric vehicle adoption.`;
@@ -117,6 +127,76 @@ function ReportCard({ report }: { report: ReportItem }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { t, i18n } = useTranslation();
   const { formatRangeKm } = useUnit();
+  const lang = i18n.language === "en" ? "en" : "pt";
+
+  const hasStaticTranslation =
+    (lang === "pt" && Boolean(report.description_pt)) ||
+    (lang === "en" && Boolean(report.description_en));
+
+  const initialText =
+    lang === "pt" && report.description_pt
+      ? report.description_pt
+      : lang === "en" && report.description_en
+      ? report.description_en
+      : report.description || "";
+
+  const cacheKey = `${lang}:${report.id}`;
+  const [translatedDesc, setTranslatedDesc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (hasStaticTranslation || !report.description) {
+      return;
+    }
+    const origLang = (report.language_original || "EN").toLowerCase();
+    if (lang === "en" && origLang.startsWith("en")) {
+      return;
+    }
+    if (lang === "pt" && origLang.startsWith("pt")) {
+      return;
+    }
+    if (clientTranslationCache.has(cacheKey)) {
+      return;
+    }
+
+    let cancelled = false;
+    fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: report.description, targetLang: lang }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data?.translatedText) {
+          clientTranslationCache.set(cacheKey, data.translatedText);
+          setTranslatedDesc(data.translatedText);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [lang, cacheKey, hasStaticTranslation, report.id, report.description, report.language_original]);
+
+  const activeTranslated = clientTranslationCache.get(cacheKey) || translatedDesc;
+
+  const displayedDescription = hasStaticTranslation
+    ? initialText
+    : activeTranslated && ((lang === "pt" && !(report.language_original || "EN").toLowerCase().startsWith("pt")) || (lang === "en" && !(report.language_original || "EN").toLowerCase().startsWith("en")))
+    ? activeTranslated
+    : initialText;
+
+  const localizedModel =
+    lang === "pt" && report.model_pt
+      ? report.model_pt
+      : lang === "en" && report.model_en
+      ? report.model_en
+      : report.vehicle_model;
+
+  const localizedBrand =
+    report.type === "Incentives" && report.country && report.vehicle_brand === report.country
+      ? localizeCountryName(report.country, lang)
+      : report.vehicle_brand;
 
   const getEmbedUrl = (url: string) => {
     try {
@@ -145,10 +225,10 @@ function ReportCard({ report }: { report: ReportItem }) {
   };
 
   const showModelBadge =
-    report.vehicle_model &&
-    report.vehicle_model !== "General" &&
-    report.vehicle_model !== "Unknown" &&
-    report.vehicle_model !== "Multiple";
+    localizedModel &&
+    localizedModel !== "General" &&
+    localizedModel !== "Unknown" &&
+    localizedModel !== "Multiple";
 
   return (
     <div className="p-5 bg-card border border-border rounded-lg">
@@ -165,12 +245,12 @@ function ReportCard({ report }: { report: ReportItem }) {
           </span>
           {report.country && (
             <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-purple-950/50 text-purple-200 border border-purple-500/40">
-              🌍 {report.country}
+              🌍 {localizeCountryName(report.country, lang)}
             </span>
           )}
-          {(report.vehicle_brand || showModelBadge) && (
+          {(localizedBrand || showModelBadge) && (
             <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-background text-gray-300 border border-border">
-              {report.vehicle_brand}{showModelBadge ? ` ${report.vehicle_model}` : ""}
+              {localizedBrand}{showModelBadge ? ` — ${localizedModel}` : ""}
             </span>
           )}
           {typeof report.estimated_range_km === "number" && report.estimated_range_km > 0 && (
@@ -190,7 +270,7 @@ function ReportCard({ report }: { report: ReportItem }) {
       </div>
       <div className="space-y-2.5 text-sm md:text-base leading-relaxed">
         <p className="text-gray-100">
-          {renderHighlightedText(report.description || "")}
+          {renderHighlightedText(displayedDescription)}
         </p>
         {(() => {
           const extraContext = getExpandedContextText(
@@ -263,7 +343,7 @@ function ResultsContent() {
   const searchParams = useSearchParams();
   const brand = searchParams.get("brand");
   const model = searchParams.get("model");
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { formatRangeKm } = useUnit();
 
   const [reports, setReports] = useState<ReportItem[]>([]);
@@ -639,7 +719,7 @@ function ResultsContent() {
                       : "bg-purple-900/20 text-purple-300 border-purple-800/50 hover:bg-purple-900/40"
                   }`}
                 >
-                  {c.country} ({c.count})
+                  {localizeCountryName(c.country, i18n.language)} ({c.count})
                 </button>
               ))}
             </div>

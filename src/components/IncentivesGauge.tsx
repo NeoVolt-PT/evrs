@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
+import { localizeCountryName } from "@/lib/defaultIncentives";
 
 export interface CountryMeasureStat {
   country: string;
@@ -20,7 +21,7 @@ export default function IncentivesGauge({
   selectedCountry,
   onSelectCountry,
 }: IncentivesGaugeProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   if (totalMeasures === 0 || countryStats.length === 0) return null;
 
@@ -31,7 +32,8 @@ export default function IncentivesGauge({
       : countryStats[0];
 
   const activeCount = activeStat ? activeStat.count : 0;
-  const activeCountryName = activeStat ? activeStat.country : selectedCountry;
+  const activeCountryRaw = activeStat ? activeStat.country : selectedCountry;
+  const activeCountryName = localizeCountryName(activeCountryRaw, i18n.language);
 
   const pct = Math.max(0, Math.min(100, Math.round((activeCount / totalMeasures) * 100)));
 
@@ -183,7 +185,7 @@ export default function IncentivesGauge({
                 >
                   <div className="flex justify-between text-xs mb-1">
                     <span className="font-semibold text-white">
-                      {item.country}
+                      {localizeCountryName(item.country, i18n.language)}
                     </span>
                     <span className="text-gray-300 font-mono">
                       {item.count} / {totalMeasures} ({itemPct}%)
