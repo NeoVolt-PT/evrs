@@ -39,7 +39,7 @@ interface ReportItem {
 }
 
 const EV_KEYWORD_REGEX =
-  /(\*\*[^*]+\*\*|(?:€|\$|£)\s*\d+(?:[.,]\d+)?(?:\s*(?:mil|k|billion|million|B|M))?|\b\d+(?:[.,]\d+)?\s*(?:km\/h|km|miles|mi|kWh|kW|mph|%|°C|°F|V|A|Wh\/km|mi\/kWh|years|anos|months|meses|NOK|RMB)\b|\b(?:real[- ]world range|range|autonomia|battery|bateria|batteries|fast[- ]charging|supercharger|charging|carregamento|degradation|degradação|WLTP|EPA|LFP|NMC|BMS|ICCU|12V|heat pump|bomba de calor|recall|software|OTA|inverter|inversor|motor|suspension|suspensão|brakes|travões|efficiency|eficiência|consumption|consumo|winter|inverno|highway|autoestrada|AWD|RWD|FWD|NACS|CCS|Type 2|regenerative braking|regeneração|state of health|SoH|thermal|warranty|garantia|reliability|fiabilidade|Fundo Ambiental|ISV|IUC|IVA|VAT|tax credit|subsidy|subsidies|incentive|incentives|rebate|rebates|discount|discounts|apoio|incentivo|desconto|isenção|Plan MOVES|Bonus Écologique|Leasing Social)\b)/gi;
+  /(\*\*[^*]+\*\*|(?:€|\$|£)\s*\d+(?:[.,]\d+)?(?:\s*(?:mil|k|billion|million|B|M))?|\b\d+(?:[.,]\d+)?\s*(?:km\/h|km|miles|mi|kWh|kW|mph|%|°C|°F|V|A|Wh\/km|mi\/kWh|years|anos|ans|años|Jahre|months|meses|mois|Monate|NOK|RMB)\b|\b(?:real[- ]world range|range|autonomia|autonomía|autonomie|Reichweite|battery|bateria|batería|batterie|batteries|Batterie|fast[- ]charging|supercharger|charging|carregamento|carga|recharge|Laden|Schnellladen|degradation|degradação|degradación|dégradation|WLTP|EPA|LFP|NMC|BMS|ICCU|12V|heat pump|bomba de calor|pompe à chaleur|Wärmepumpe|recall|rappel|Rückruf|software|logiciel|OTA|inverter|inversor|onduleur|Wechselrichter|motor|moteur|Motor|suspension|suspensão|suspensión|Fahrwerk|brakes|travões|frenos|freins|Bremsen|efficiency|eficiência|eficiencia|efficacité|Effizienz|consumption|consumo|consommation|Verbrauch|winter|inverno|invierno|hiver|Winter|highway|autoestrada|autopista|autoroute|Autobahn|AWD|RWD|FWD|NACS|CCS|Type 2|regenerative braking|regeneração|state of health|SoH|thermal|warranty|garantia|garantía|garantie|Garantie|reliability|fiabilidade|fiabilidad|fiabilité|Zuverlässigkeit|Fundo Ambiental|ISV|IUC|IVA|VAT|tax credit|subsidy|subsidies|incentive|incentives|rebate|rebates|discount|discounts|apoio|incentivo|desconto|isenção|Plan MOVES|Bonus Écologique|Leasing Social|Förderung|Kaufprämie|ayuda|subvención)\b)/gi;
 
 function renderHighlightedText(text: string) {
   const parts = text.split(EV_KEYWORD_REGEX);
@@ -88,46 +88,85 @@ function getExpandedContextText(
     .filter(Boolean)
     .join(" ") || "EV";
 
-  const isPt = lang === "pt";
+  const shortLang = (lang || "pt").slice(0, 2).toLowerCase();
 
   if (report.type === "Real Range") {
-    return isPt
-      ? `Análise complementar para ${vehicleName}: Este registo foca-se no desempenho de **autonomia** e **eficiência** energética em utilização real${formattedRange ? ` (estimativa registada de **${formattedRange}**)` : ""}. Em comparação com os ciclos **WLTP** e **EPA**, fatores como velocidade em **autoestrada**, climatização e gestão térmica da **bateria** influenciam diretamente o **consumo** final.`
-      : `Additional telemetry context for ${vehicleName}: This report evaluates **real-world range** and energy **efficiency** under practical driving conditions${formattedRange ? ` (recorded estimate of **${formattedRange}**)` : ""}. Compared to official **WLTP** and **EPA** ratings, **highway** speeds, cabin heating, and **battery** thermal management directly impact net **consumption**.`;
+    if (shortLang === "pt")
+      return `Análise complementar para ${vehicleName}: Este registo foca-se no desempenho de **autonomia** e **eficiência** energética em utilização real${formattedRange ? ` (estimativa registada de **${formattedRange}**)` : ""}. Em comparação com os ciclos **WLTP** e **EPA**, fatores como velocidade em **autoestrada**, climatização e gestão térmica da **bateria** influenciam diretamente o **consumo** final.`;
+    if (shortLang === "fr")
+      return `Analyse complémentaire pour ${vehicleName} : Ce rapport évalue l'**autonomie** réelle et l'**efficacité** énergétique en conditions réelles${formattedRange ? ` (estimation enregistrée de **${formattedRange}**)` : ""}. Par rapport aux normes **WLTP** et **EPA**, la conduite sur **autoroute** et la gestion thermique de la **batterie** influencent directement la **consommation**.`;
+    if (shortLang === "es")
+      return `Análisis complementario para ${vehicleName}: Este informe evalúa la **autonomía** real y la **eficiencia** energética en conducción práctica${formattedRange ? ` (estimación registrada de **${formattedRange}**)` : ""}. Frente a los ciclos **WLTP** y **EPA**, la velocidad en **autopista** y la gestión térmica de la **batería** influyen directamente en el **consumo**.`;
+    if (shortLang === "de")
+      return `Ergänzende Analyse für ${vehicleName}: Dieser Bericht bewertet die reale **Reichweite** und **Effizienz** unter Praxisbedingungen${formattedRange ? ` (erfasster Wert von **${formattedRange}**)` : ""}. Im Vergleich zu **WLTP** und **EPA** beeinflussen **Autobahn**-Geschwindigkeit und das Thermomanagement der **Batterie** direkt den **Verbrauch**.`;
+    return `Additional telemetry context for ${vehicleName}: This report evaluates **real-world range** and energy **efficiency** under practical driving conditions${formattedRange ? ` (recorded estimate of **${formattedRange}**)` : ""}. Compared to official **WLTP** and **EPA** ratings, **highway** speeds, cabin heating, and **battery** thermal management directly impact net **consumption**.`;
   }
 
   if (report.type === "Battery") {
-    return isPt
-      ? `Análise complementar para ${vehicleName}: Este alerta incide sobre o sistema de **bateria** de alta tensão, células **LFP** / **NMC**, curva de **carregamento** rápido ou gestão eletrónica **BMS** / **12V**. Recomenda-se monitorizar o estado de saúde (**SoH**), estabilidade em postos **CCS** e eventuais atualizações de **software** (**OTA**) ou campanhas de **recall**.`
-      : `Additional telemetry context for ${vehicleName}: This report highlights high-voltage **battery** behavior, **fast-charging** stability, **BMS** management, or **12V** auxiliary system performance. Owners and buyers should verify State of Health (**SoH**) diagnostics, **OTA** **software** updates, and any applicable **recall** bulletins.`;
+    if (shortLang === "pt")
+      return `Análise complementar para ${vehicleName}: Este alerta incide sobre o sistema de **bateria** de alta tensão, células **LFP** / **NMC**, curva de **carregamento** rápido ou gestão eletrónica **BMS** / **12V**. Recomenda-se monitorizar o estado de saúde (**SoH**), estabilidade em postos **CCS** e eventuais atualizações de **software** (**OTA**) ou campanhas de **recall**.`;
+    if (shortLang === "fr")
+      return `Analyse complémentaire pour ${vehicleName} : Ce rapport porte sur le système de **batterie** haute tension, la courbe de **recharge** rapide, le **BMS** ou la batterie **12V**. Il est conseillé de vérifier l'état de santé (**SoH**), les mises à jour **OTA** et les campagnes de **rappel**.`;
+    if (shortLang === "es")
+      return `Análisis complementario para ${vehicleName}: Este aviso se centra en el sistema de **batería** de alta tensión, la curva de **carga** rápida, la gestión **BMS** o el sistema auxiliar de **12V**. Se recomienda supervisar el estado de salud (**SoH**) y las actualizaciones **OTA**.`;
+    if (shortLang === "de")
+      return `Ergänzende Analyse für ${vehicleName}: Dieser Bericht betrifft die Hochvolt-**Batterie**, das **Schnellladen**, das **BMS** oder das **12V**-Bordnetz. Es wird empfohlen, den Gesundheitszustand (**SoH**), **OTA**-**Software**-Updates und eventuelle **Rückruf**-Aktionen zu prüfen.`;
+    return `Additional telemetry context for ${vehicleName}: This report highlights high-voltage **battery** behavior, **fast-charging** stability, **BMS** management, or **12V** auxiliary system performance. Owners and buyers should verify State of Health (**SoH**) diagnostics, **OTA** **software** updates, and any applicable **recall** bulletins.`;
   }
 
   if (report.type === "Mechanical") {
-    return isPt
-      ? `Análise complementar para ${vehicleName}: Este registo documenta componentes de **fiabilidade** física, incluindo **motor** elétrico, **inversor**, **suspensão**, direção ou sistema de **travões**. A verificação preventiva durante o período de **garantia** ajuda a mitigar custos de manutenção inesperados.`
-      : `Additional telemetry context for ${vehicleName}: This entry documents physical **reliability** and hardware components such as the drive **motor**, **inverter**, **suspension**, steering, or **brakes**. Proactive inspection under factory **warranty** is recommended to prevent long-term wear issues.`;
+    if (shortLang === "pt")
+      return `Análise complementar para ${vehicleName}: Este registo documenta componentes de **fiabilidade** física, incluindo **motor** elétrico, **inversor**, **suspensão**, direção ou sistema de **travões**. A verificação preventiva durante o período de **garantia** ajuda a mitigar custos de manutenção inesperados.`;
+    if (shortLang === "fr")
+      return `Analyse complémentaire pour ${vehicleName} : Cet enregistrement documente la **fiabilité** mécanique, notamment le **moteur** électrique, l'**onduleur**, la **suspension** ou les **freins**. Une vérification sous **garantie** est recommandée.`;
+    if (shortLang === "es")
+      return `Análisis complementario para ${vehicleName}: Este registro documenta componentes de **fiabilidad** mecánica, como el **motor** eléctrico, **inversor**, **suspensión** o **frenos**. Se recomienda una revisión preventiva durante la **garantía**.`;
+    if (shortLang === "de")
+      return `Ergänzende Analyse für ${vehicleName}: Dieser Eintrag dokumentiert die mechanische **Zuverlässigkeit** wie Elektro-**Motor**, **Wechselrichter**, **Fahrwerk** oder **Bremsen**. Eine rechtzeitige Prüfung innerhalb der **Garantie** wird empfohlen.`;
+    return `Additional telemetry context for ${vehicleName}: This entry documents physical **reliability** and hardware components such as the drive **motor**, **inverter**, **suspension**, steering, or **brakes**. Proactive inspection under factory **warranty** is recommended to prevent long-term wear issues.`;
   }
 
   if (report.type === "Incentives") {
     const countryLabel = localizeCountryName(
       report.country || report.vehicle_brand || "Global",
-      lang
+      shortLang
     );
-    return isPt
-      ? `Enquadramento em ${countryLabel}: Esta medida integra o pacote de **incentivos**, **descontos** diretos ou benefícios fiscais (**ISV**, **IUC**, **IVA** ou **Fundo Ambiental**) aplicáveis à aquisição de veículos elétricos e instalação de postos de **carregamento**.`
-      : `Policy context in ${countryLabel}: This measure is part of the national **incentives**, purchase **rebates**, **tax credit** exemptions, or **charging** infrastructure grants aimed at accelerating electric vehicle adoption.`;
+    if (shortLang === "pt")
+      return `Enquadramento em ${countryLabel}: Esta medida integra o pacote de **incentivos**, **descontos** diretos ou benefícios fiscais (**ISV**, **IUC**, **IVA** ou **Fundo Ambiental**) aplicáveis à aquisição de veículos elétricos e instalação de postos de **carregamento**.`;
+    if (shortLang === "fr")
+      return `Contexte réglementaire (${countryLabel}) : Cette mesure fait partie des **Bonus Écologique**, exonérations fiscales ou aides à la **recharge** visant à accélérer l'adoption des véhicules électriques.`;
+    if (shortLang === "es")
+      return `Contexto normativo (${countryLabel}): Esta medida forma parte del paquete de **ayuda**, **subvención** (**Plan MOVES**), deducciones fiscales o ayudas de **carga** aplicables a vehículos eléctricos.`;
+    if (shortLang === "de")
+      return `Politischer Rahmen (${countryLabel}): Diese Maßnahme gehört zu den nationalen **Förderung**-Programmen, **Kaufprämie**-Rabatten, Steuerbefreiungen oder Zuschüssen für **Laden**-Infrastruktur.`;
+    return `Policy context in ${countryLabel}: This measure is part of the national **incentives**, purchase **rebates**, **tax credit** exemptions, or **charging** infrastructure grants aimed at accelerating electric vehicle adoption.`;
   }
 
-  return isPt
-    ? `Análise complementar para ${vehicleName}: Os indicadores deste relato destacam positivamente a **fiabilidade**, conforto de condução, **eficiência** elétrica e integração de **software** do veículo, contribuindo favoravelmente para a pontuação global no Índice EVRS.`
-    : `Additional telemetry context for ${vehicleName}: This report highlights positive owner satisfaction, driving dynamics, electrical **efficiency**, and **software** integration, contributing favorably to the vehicle's overall **reliability** score in the EVRS Index.`;
+  if (shortLang === "pt")
+    return `Análise complementar para ${vehicleName}: Os indicadores deste relato destacam positivamente a **fiabilidade**, conforto de condução, **eficiência** elétrica e integração de **software** do veículo, contribuindo favoravelmente para a pontuação global no Índice EVRS.`;
+  if (shortLang === "fr")
+    return `Analyse complémentaire pour ${vehicleName} : Ce retour souligne positivement la **fiabilité**, le confort de conduite, l'**efficacité** électrique et le **logiciel** du véhicule dans l'Indice EVRS.`;
+  if (shortLang === "es")
+    return `Análisis complementario para ${vehicleName}: Este informe destaca positivamente la **fiabilidad**, la **eficiencia** eléctrica y el **software** del vehículo en el Índice EVRS.`;
+  if (shortLang === "de")
+    return `Ergänzende Analyse für ${vehicleName}: Dieser Bericht hebt die **Zuverlässigkeit**, die elektrische **Effizienz** und die **Software**-Integration des Fahrzeugs im EVRS-Index positiv hervor.`;
+  return `Additional telemetry context for ${vehicleName}: This report highlights positive owner satisfaction, driving dynamics, electrical **efficiency**, and **software** integration, contributing favorably to the vehicle's overall **reliability** score in the EVRS Index.`;
 }
+
+const DATE_LOCALES: Record<string, string> = {
+  pt: "pt-PT",
+  en: "en-US",
+  fr: "fr-FR",
+  es: "es-ES",
+  de: "de-DE",
+};
 
 function ReportCard({ report }: { report: ReportItem }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { t, i18n } = useTranslation();
   const { formatRangeKm } = useUnit();
-  const lang = i18n.language === "en" ? "en" : "pt";
+  const rawLang = (i18n.language || "pt").slice(0, 2).toLowerCase();
+  const lang = ["pt", "en", "fr", "es", "de"].includes(rawLang) ? rawLang : "pt";
 
   const hasStaticTranslation =
     (lang === "pt" && Boolean(report.description_pt)) ||
@@ -141,17 +180,14 @@ function ReportCard({ report }: { report: ReportItem }) {
       : report.description || "";
 
   const cacheKey = `${lang}:${report.id}`;
-  const [translatedDesc, setTranslatedDesc] = useState<string | null>(null);
+  const [, setTranslationTick] = useState(0);
 
   useEffect(() => {
     if (hasStaticTranslation || !report.description) {
       return;
     }
-    const origLang = (report.language_original || "EN").toLowerCase();
-    if (lang === "en" && origLang.startsWith("en")) {
-      return;
-    }
-    if (lang === "pt" && origLang.startsWith("pt")) {
+    const origLang = (report.language_original || "EN").slice(0, 2).toLowerCase();
+    if (lang === origLang) {
       return;
     }
     if (clientTranslationCache.has(cacheKey)) {
@@ -168,7 +204,7 @@ function ReportCard({ report }: { report: ReportItem }) {
       .then((data) => {
         if (!cancelled && data?.translatedText) {
           clientTranslationCache.set(cacheKey, data.translatedText);
-          setTranslatedDesc(data.translatedText);
+          setTranslationTick((v) => v + 1);
         }
       })
       .catch(() => {});
@@ -178,11 +214,12 @@ function ReportCard({ report }: { report: ReportItem }) {
     };
   }, [lang, cacheKey, hasStaticTranslation, report.id, report.description, report.language_original]);
 
-  const activeTranslated = clientTranslationCache.get(cacheKey) || translatedDesc;
+  const activeTranslated = clientTranslationCache.get(cacheKey);
+  const origLangCode = (report.language_original || "EN").slice(0, 2).toLowerCase();
 
   const displayedDescription = hasStaticTranslation
     ? initialText
-    : activeTranslated && ((lang === "pt" && !(report.language_original || "EN").toLowerCase().startsWith("pt")) || (lang === "en" && !(report.language_original || "EN").toLowerCase().startsWith("en")))
+    : activeTranslated && lang !== origLangCode
     ? activeTranslated
     : initialText;
 
@@ -265,7 +302,7 @@ function ReportCard({ report }: { report: ReportItem }) {
           )}
         </div>
         <span className="text-xs text-gray-500">
-          {new Date(report.report_date).toLocaleDateString(i18n.language === "en" ? "en-US" : "pt-PT")}
+          {new Date(report.report_date).toLocaleDateString(DATE_LOCALES[lang] || "pt-PT")}
         </span>
       </div>
       <div className="space-y-2.5 text-sm md:text-base leading-relaxed">

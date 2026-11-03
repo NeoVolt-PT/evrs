@@ -2,11 +2,14 @@ import { NextResponse } from "next/server";
 
 const memoryCache = new Map<string, string>();
 
+const SUPPORTED_LANGS = new Set(["pt", "en", "fr", "es", "de"]);
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const text = (body?.text || "").trim();
-    const targetLang = body?.targetLang === "pt" ? "pt" : "en";
+    const rawLang = (body?.targetLang || "pt").toLowerCase().slice(0, 2);
+    const targetLang = SUPPORTED_LANGS.has(rawLang) ? rawLang : "en";
 
     if (!text) {
       return NextResponse.json({ translatedText: "" });

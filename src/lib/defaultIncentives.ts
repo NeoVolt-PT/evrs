@@ -17,28 +17,74 @@ export interface IncentiveMeasure {
   country?: string;
 }
 
-const COUNTRY_TRANSLATIONS_PT: Record<string, string> = {
-  "Portugal": "Portugal",
-  "United States": "Estados Unidos",
-  "European Union": "União Europeia",
-  "United Kingdom": "Reino Unido",
-  "Germany": "Alemanha",
-  "France": "França",
-  "Spain": "Espanha",
-  "China": "China",
-  "Norway": "Noruega",
-  "Canada": "Canadá",
-  "Australia": "Austrália",
-  "Brazil": "Brasil",
-  "Global": "Global",
+const COUNTRY_TRANSLATIONS: Record<string, Record<string, string>> = {
+  pt: {
+    "Portugal": "Portugal",
+    "United States": "Estados Unidos",
+    "European Union": "União Europeia",
+    "United Kingdom": "Reino Unido",
+    "Germany": "Alemanha",
+    "France": "França",
+    "Spain": "Espanha",
+    "China": "China",
+    "Norway": "Noruega",
+    "Canada": "Canadá",
+    "Australia": "Austrália",
+    "Brazil": "Brasil",
+    "Global": "Global",
+  },
+  fr: {
+    "Portugal": "Portugal",
+    "United States": "États-Unis",
+    "European Union": "Union Européenne",
+    "United Kingdom": "Royaume-Uni",
+    "Germany": "Allemagne",
+    "France": "France",
+    "Spain": "Espagne",
+    "China": "Chine",
+    "Norway": "Norvège",
+    "Canada": "Canada",
+    "Australia": "Australie",
+    "Brazil": "Brésil",
+    "Global": "Mondial",
+  },
+  es: {
+    "Portugal": "Portugal",
+    "United States": "Estados Unidos",
+    "European Union": "Unión Europea",
+    "United Kingdom": "Reino Unido",
+    "Germany": "Alemania",
+    "France": "Francia",
+    "Spain": "España",
+    "China": "China",
+    "Norway": "Noruega",
+    "Canada": "Canadá",
+    "Australia": "Australia",
+    "Brazil": "Brasil",
+    "Global": "Global",
+  },
+  de: {
+    "Portugal": "Portugal",
+    "United States": "Vereinigte Staaten",
+    "European Union": "Europäische Union",
+    "United Kingdom": "Vereinigtes Königreich",
+    "Germany": "Deutschland",
+    "France": "Frankreich",
+    "Spain": "Spanien",
+    "China": "China",
+    "Norway": "Norwegen",
+    "Canada": "Kanada",
+    "Australia": "Australien",
+    "Brazil": "Brasilien",
+    "Global": "Global",
+  },
 };
 
 export function localizeCountryName(country: string | undefined, lang: string): string {
   if (!country) return "Global";
-  if (lang === "pt") {
-    return COUNTRY_TRANSLATIONS_PT[country] || country;
-  }
-  return country;
+  const shortLang = (lang || "pt").slice(0, 2).toLowerCase();
+  if (shortLang === "en") return country;
+  return COUNTRY_TRANSLATIONS[shortLang]?.[country] || country;
 }
 
 const COUNTRY_PATTERNS: [string, RegExp][] = [

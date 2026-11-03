@@ -3,6 +3,9 @@
 import i18n from "i18next";
 import { initReactI18next, I18nextProvider } from "react-i18next";
 import { createContext, useContext, useEffect, useState } from "react";
+import { frTranslation } from "@/lib/locales/fr";
+import { esTranslation } from "@/lib/locales/es";
+import { deTranslation } from "@/lib/locales/de";
 
 export type DistanceUnit = "km" | "miles";
 
@@ -282,6 +285,15 @@ const resources = {
       "contact_success_msg": "Mensagem enviada com sucesso! Responderemos em breve.",
       "contact_error_msg": "Não foi possível enviar. Contacte diretamente:"
     }
+  },
+  fr: {
+    translation: frTranslation
+  },
+  es: {
+    translation: esTranslation
+  },
+  de: {
+    translation: deTranslation
   }
 };
 
@@ -316,7 +328,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
     i18n.on("languageChanged", handleLanguageChanged);
 
     const savedLang = window.localStorage.getItem("evrs_lang");
-    if ((savedLang === "en" || savedLang === "pt") && i18n.language !== savedLang) {
+    if (
+      savedLang &&
+      ["en", "pt", "fr", "es", "de"].includes(savedLang) &&
+      i18n.language !== savedLang
+    ) {
       i18n.changeLanguage(savedLang);
     } else {
       document.documentElement.lang = i18n.language || "pt";
