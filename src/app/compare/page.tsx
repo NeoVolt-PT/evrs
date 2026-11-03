@@ -154,7 +154,21 @@ export default function ComparePage() {
     <main className="max-w-5xl mx-auto px-6 py-10 mt-4 mb-16 space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">⚔️ {l.title}</h1>
+          <h1 className="text-3xl font-bold text-white flex items-center gap-2.5">
+            <svg
+              className="w-7 h-7 text-white shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M7 3v18M7 3l-4 4M7 3l4 4" />
+              <path d="M17 21V3M17 21l-4-4M17 21l4-4" />
+            </svg>
+            <span>{l.title}</span>
+          </h1>
           <p className="text-sm text-gray-400 mt-1">{l.subtitle}</p>
         </div>
         <Link href="/" className="px-4 py-2 border border-border rounded-lg bg-card hover:bg-border transition text-sm">

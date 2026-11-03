@@ -142,9 +142,21 @@ export default function Header() {
         <div className="flex items-center gap-3 sm:gap-4 text-sm">
           <Link
             href="/compare"
-            className="px-2.5 py-1 rounded-full bg-emerald-900/30 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-900/50 transition text-xs font-semibold hidden md:inline-block"
+            className="px-2.5 py-1 rounded-full bg-emerald-900/30 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-900/50 transition text-xs font-semibold hidden md:inline-flex items-center gap-1"
           >
-            ⚔️ VS
+            <svg
+              className="w-3.5 h-3.5 text-white"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M7 3v18M7 3l-4 4M7 3l4 4" />
+              <path d="M17 21V3M17 21l-4-4M17 21l4-4" />
+            </svg>
+            <span>VS</span>
           </Link>
           <Link
             href="/results?brand=Incentives"
